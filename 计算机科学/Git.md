@@ -78,6 +78,8 @@ git push
 ```
 git branch new2
 git add .
-git merge new2
+git merge new2  //merge之后我的本地master也变了妈的
 git push
 ```
+
+最多保存分支，然后更新master
