@@ -54,3 +54,30 @@ git remote add origin <仓库连接>
 ```
 git push origin master
 ```
+
+## 远程提交分支
+
+```
+git branch new1 //创建一个分支
+git push origin new1<分支名>
+```
+
+## 远程更新master
+
+```
+git checkout master
+git add .
+git commit -m ""
+git push
+```
+
+## 本地合并分支并推送master
+
+一次更新，需要保存分支（方便回退版本）；同时需要更新master
+
+```
+git branch new2
+git add .
+git merge new2
+git push
+```
