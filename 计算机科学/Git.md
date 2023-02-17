@@ -71,6 +71,22 @@ git commit -m ""
 git push
 ```
 
+**如果遇到**：`# error: failed to push some refs to ‘https://gitee.com/`
+
+出现错误的主要原因是[gitee](https://so.csdn.net/so/search?q=gitee&spm=1001.2101.3001.7020)(github)中的README.md文件不在本地代码目录中,此时我们要执行
+
+```
+git pull --rebase origin master
+```
+
+命令README.md拉到本地，
+
+任何然后执行
+
+```
+git push origin master
+```
+
 ## 本地合并分支并推送master
 
 一次更新，需要保存分支（方便回退版本）；同时需要更新master
