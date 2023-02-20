@@ -225,63 +225,61 @@ using UnityEngine;
 
 public class movecam : MonoBehaviour
 {
-	private float speed = 4f;
+    private float speed = 4f;
 
-	private Transform tr;
+    private Transform tr;
 
-	private Vector3 mpStart;
-	private Vector3 originalRotation;
+    private Vector3 mpStart;
+    private Vector3 originalRotation;
 
-	private float t = 0f;
+    private float t = 0f;
 
-	// 
-	void Awake()
-	{
-		tr = GetComponent<Transform>();
-		t = Time.realtimeSinceStartup;
-	}
+    // 
+    void Awake()
+    {
+        tr = GetComponent<Transform>();
+        t = Time.realtimeSinceStartup;
+    }
 
-	// 
-	void Update()
-	{
-		// Movement
-		float forward = 0f;
-		if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) { forward += 1f; }
-		if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) { forward -= 1f; }
+    // 
+    void Update()
+    {
+        // Movement
+        float forward = 0f;
+        if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) { forward += 1f; }
+        if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) { forward -= 1f; }
 
-		float right = 0f;
-		if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) { right += 1f; }
-		if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) { right -= 1f; }
+        float right = 0f;
+        if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) { right += 1f; }
+        if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) { right -= 1f; }
 
-		float up = 0f;
-		if (Input.GetKey(KeyCode.E) || Input.GetKey(KeyCode.Space)) { up += 1f; }
-		if (Input.GetKey(KeyCode.Q) || Input.GetKey(KeyCode.C)) { up -= 1f; }
+        float up = 0f;
+        if (Input.GetKey(KeyCode.E) || Input.GetKey(KeyCode.Space)) { up += 1f; }
+        if (Input.GetKey(KeyCode.Q) || Input.GetKey(KeyCode.C)) { up -= 1f; }
 
-		float dT = Time.realtimeSinceStartup - t;
-		t = Time.realtimeSinceStartup;
+        float dT = Time.realtimeSinceStartup - t;
+        t = Time.realtimeSinceStartup;
 
-		tr.position += tr.TransformDirection(new Vector3(right, up, forward) * speed * (Input.GetKey(KeyCode.LeftShift) ? 2f : 1f) * dT);
+        tr.position += tr.TransformDirection(new Vector3(right, up, forward) * speed * (Input.GetKey(KeyCode.LeftShift) ? 2f : 1f) * dT);
 
-		// Rotation
-		Vector3 mpEnd = Input.mousePosition;
+        // Rotation
+        Vector3 mpEnd = Input.mousePosition;
 
-		// Right Mouse Button Down
-		if (Input.GetMouseButtonDown(1))
-		{
-			originalRotation = tr.localEulerAngles;
-			mpStart = mpEnd;
-		}
+        // Right Mouse Button Down
+        if (Input.GetMouseButtonDown(1))
+        {
+            originalRotation = tr.localEulerAngles;
+            mpStart = mpEnd;
+        }
 
-		// Right Mouse Button Hold
-		if (Input.GetMouseButton(1))
-		{
-			Vector2 offs = new Vector2((mpEnd.x - mpStart.x) / Screen.width, (mpStart.y - mpEnd.y) / Screen.height);
-			tr.localEulerAngles = originalRotation + new Vector3(offs.y * 360f, offs.x * 360f, 0f);
-		}
-	}
+        // Right Mouse Button Hold
+        if (Input.GetMouseButton(1))
+        {
+            Vector2 offs = new Vector2((mpEnd.x - mpStart.x) / Screen.width, (mpStart.y - mpEnd.y) / Screen.height);
+            tr.localEulerAngles = originalRotation + new Vector3(offs.y * 360f, offs.x * 360f, 0f);
+        }
+    }
 }
-
-
 ```
 
 # CardBoard
@@ -386,6 +384,140 @@ public class movecam : MonoBehaviour
 
 1. 在**插件提供程序**下选择 `Cardboard XR Plugin`。
 
-## 构建项目
+## 镜头移动
 
-file -> build and setting ->build
+> cardboard提供的是rotation和position的跟踪（加载默认的hello cardboard场景的情况下），我们要**使用手机跟踪rotation，用键盘的wasd来控制移动**
+
+1. 将player中的camera移出来，然后删除player，然后将`camera->tracked pos driver->tracking type`中改为`rotation only`即可
+
+![](src/2023-02-21-02-45-10-image.png)
+
+2. 然后要监听键盘wasd，只需要在camera脚本上添加监听即可。完整cs：
+
+```csharp
+//-----------------------------------------------------------------------
+// <copyright file="CameraPointer.cs" company="Google LLC">
+// Copyright 2020 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System.Collections.Generic;
+using System.Collections;
+using UnityEngine;
+
+/// <summary>
+/// Sends messages to gazed GameObject.
+/// </summary>
+public class CameraPointer : MonoBehaviour
+{
+    private const float _maxDistance = 10;
+    private GameObject _gazedAtObject = null;
+
+    /// <summary>
+    /// Update is called once per frame.
+    /// </summary>
+    /// 
+
+    private float speed = 4f;
+
+    private Transform tr;
+
+    private Vector3 mpStart;
+    private Vector3 originalRotation;
+    private Vector3 rot;
+    private Vector3 zero = new Vector3(0,0,0);
+
+    private float t = 0f;
+
+    // 
+    void Awake()
+    {
+        tr = GetComponent<Transform>();
+        t = Time.realtimeSinceStartup;
+
+     
+    }
+    public void Start()
+    {
+       // tr.localEulerAngles = zero;
+    }
+
+
+    public void Update()
+    {
+
+        // Movement
+        float forward = 0f;
+        if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) { forward += 1f; }
+        if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) { forward -= 1f; }
+
+        float right = 0f;
+        if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) { right += 1f; }
+        if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) { right -= 1f; }
+
+        float up = 0f;
+        if (Input.GetKey(KeyCode.E) || Input.GetKey(KeyCode.Space)) { up += 1f; }
+        if (Input.GetKey(KeyCode.Q) || Input.GetKey(KeyCode.C)) { up -= 1f; }
+
+        float dT = Time.realtimeSinceStartup - t;
+        //float dT = Time.deltaTime;
+        t = Time.realtimeSinceStartup;
+
+        tr.position += tr.TransformDirection(new Vector3(right, up, forward) * speed * (Input.GetKey(KeyCode.LeftShift) ? 2f : 1f) * dT);
+
+        Debug.Log(tr.position);
+
+        // Casts ray towards camera's forward direction, to detect if a GameObject is being gazed
+        // at.
+        RaycastHit hit;
+        if (Physics.Raycast(transform.position, transform.forward, out hit, _maxDistance))
+        {
+            // GameObject detected in front of the camera.
+            if (_gazedAtObject != hit.transform.gameObject)
+            {
+                // New GameObject.
+                _gazedAtObject?.SendMessage("OnPointerExit");
+                _gazedAtObject = hit.transform.gameObject;
+                _gazedAtObject.SendMessage("OnPointerEnter");
+            }
+        }
+        else
+        {
+            // No GameObject detected in front of the camera.
+            _gazedAtObject?.SendMessage("OnPointerExit");
+            _gazedAtObject = null;
+        }
+
+        // Checks for screen touches.
+        if (Google.XR.Cardboard.Api.IsTriggerPressed)
+        {
+            _gazedAtObject?.SendMessage("OnPointerClick");
+        }
+
+      
+    }
+
+}
+
+
+```
+
+## 一些坑
+
+1.项目导出的时候会报错（build and run时），一般改下路径即可
+
+2.直接在官方默认的hellocardboard里面开始折腾就可以了哦~
+
+3.官方的light要调节一下，否则看不清地形的材质
