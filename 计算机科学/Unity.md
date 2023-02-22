@@ -384,7 +384,7 @@ public class movecam : MonoBehaviour
 
 1. 在**插件提供程序**下选择 `Cardboard XR Plugin`。
 
-## 镜头移动
+## 镜头移动--camera为root
 
 > cardboard提供的是rotation和position的跟踪（加载默认的hello cardboard场景的情况下），我们要**使用手机跟踪rotation，用键盘的wasd来控制移动**
 
@@ -447,7 +447,7 @@ public class CameraPointer : MonoBehaviour
         tr = GetComponent<Transform>();
         t = Time.realtimeSinceStartup;
 
-     
+
     }
     public void Start()
     {
@@ -506,13 +506,21 @@ public class CameraPointer : MonoBehaviour
             _gazedAtObject?.SendMessage("OnPointerClick");
         }
 
-      
+
     }
 
 }
-
-
 ```
+
+## 镜头移动--player为root
+
+> 在不断地debug过程中，发现cardboard改变的是localeula角度，所以给camera一个父级player，控制player和camera是不可取的。因为localeular是改变的。
+
+所以，为了加入碰撞检测，需要给camera增加父对象player，但是不用添加任何控制脚本，只需要添加`Rigridbody`和`capsule collider`即可，前者刚体增加重力效果，后者增加碰撞检测效果。
+
+然后将camera控制脚本放到player下面即可。相当于player只是起到了碰撞检测+重力的效果。
+
+![](src/2023-02-22-03-43-47-image.png)
 
 ## 一些坑
 
