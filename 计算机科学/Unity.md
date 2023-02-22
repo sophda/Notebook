@@ -282,7 +282,7 @@ public class movecam : MonoBehaviour
 }
 ```
 
-# CardBoard
+# CardBoard VR
 
 您可以使用 Cardboard SDK 将智能手机转变成 VR 平台。智能手机可以呈现立体呈现的 3D 场景、跟踪头部移动并做出反应，还能通过检测用户何时按观看者按钮来与应用互动。
 
@@ -521,6 +521,89 @@ public class CameraPointer : MonoBehaviour
 然后将camera控制脚本放到player下面即可。相当于player只是起到了碰撞检测+重力的效果。
 
 ![](src/2023-02-22-03-43-47-image.png)
+
+## canvas使用
+
+> 应用场景：在物体的上文显示文字等内容。gui无法在vr模式中显示，所以使用canvas，将3D世界中的canvas作为一个ui界面。
+
+1. 首先创建一个canvas，然后放到要显示的物体下面（比如tree上），然后调整好位置。因为要显示文字，还需要textmeshpro，同样放到canvas下面。层级关系为：<img src="src/2023-02-22-18-33-09-image.png" title="" alt="" data-align="center">
+
+2. 设置canvas属性
+
+<img src="src/2023-02-22-18-43-54-image.png" title="" alt="" data-align="center">
+
+3. 为**tree2**编写脚本，设定功能为：**当检测到射线的时候，显示canvas。并把canvas的欧拉角设置为和camera相同，从而实现跟随视角移动**
+
+> 相关api：
+> 
+> 1. transform.find("")  // 找孩子节点，返回的是transform
+> 
+> 2. transform.GetComponent<>();  //找到该transform下的组件，如rigridbody等
+> 
+> 3. Transform tr = GameObject.Find("Main Camera").transform;  //在全局内寻找对象，并返回transfrom对象
+
+```csharp
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
+
+
+public class TreeCtrl : MonoBehaviour
+{
+
+    private TextMeshProUGUI tm;
+    private Transform canvas;
+    private Transform cam;
+    
+
+    // Start is called before the first frame update
+    void Start()
+    {
+
+        canvas = transform.Find("Canvas");
+        tm = canvas.Find("Text (TMP)").GetComponent<TextMeshProUGUI>();
+        tm.text = "hello";
+        
+        canvas.gameObject.SetActive(false);
+    }
+
+    private void Update()
+    {
+        //Debug.Log("tree "+ GameObject.Find("Main Camera").transform.position);
+        cam = GameObject.Find("Main Camera").transform;
+        canvas.localEulerAngles = cam.localEulerAngles;
+
+
+
+    }
+
+    // Update is called once per frame
+
+    public void OnPointerEnter()
+    {
+        Debug.Log("HELLO");
+        canvas.gameObject.SetActive(true);
+
+    }
+
+    /// <summary>
+    /// This method is called by the Main Camera when it stops gazing at this GameObject.
+    /// </summary>
+    public void OnPointerExit()
+    {
+        canvas.gameObject.SetActive(false);
+    }
+
+
+
+}
+
+
+```
+
+
 
 ## 一些坑
 
