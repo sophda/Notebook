@@ -556,7 +556,7 @@ public class TreeCtrl : MonoBehaviour
     private TextMeshProUGUI tm;
     private Transform canvas;
     private Transform cam;
-    
+
 
     // Start is called before the first frame update
     void Start()
@@ -565,7 +565,7 @@ public class TreeCtrl : MonoBehaviour
         canvas = transform.Find("Canvas");
         tm = canvas.Find("Text (TMP)").GetComponent<TextMeshProUGUI>();
         tm.text = "hello";
-        
+
         canvas.gameObject.SetActive(false);
     }
 
@@ -599,11 +599,7 @@ public class TreeCtrl : MonoBehaviour
 
 
 }
-
-
 ```
-
-
 
 ## 一些坑
 

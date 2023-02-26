@@ -41,7 +41,6 @@
        w.show ();
        return QApplication::exec ();
    }
-   
    ```
 
 ## 显示点云项目
@@ -79,10 +78,7 @@ include(${VTK_USE_FILE})
 #target_link_libraries(${PROJECT_NAME} Qt5::Widgets ${VTK_LIBRARIES})
 
 target_link_libraries(${PROJECT_NAME} ${REQUIRED_LIBS_QUALIFIED} ${VTK_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS})
-
 ```
-
-
 
 2. 新建一个qt ui类，命名为`mainwindow`，此时会生成三个文件。
 
@@ -121,10 +117,7 @@ private:
 };
 
 #endif //QT_MAINWINDOW_H
-
 ```
-
-
 
 4. 修改`mainwindow.cpp`,一般做类函数定义
 
@@ -185,8 +178,6 @@ void mainwindow::btn_openpcd() {
 }
 ```
 
-
-
 5. 在`qt designer`中修改控件
 
 新建一个`widget`；然后右键**提升控件**，提升为：（注意头文件要大写）
@@ -198,3 +189,21 @@ void mainwindow::btn_openpcd() {
 6. 然后就可以运行了哦~
 
 ![](src/2023-02-23-23-17-58-image.png)
+
+## 显示图片
+
+> 使用ui中的label显示图片
+
+在对应的槽函数中填写
+
+```cpp
+   ui->textEdit->setText("hello world!");
+   Mat img = imread("/home/icecreamshao/108.bmp");
+
+   Mat temp;
+   cvtColor(img, temp, CV_BGR2RGB);
+   QImage Qtemp = QImage((const unsigned char*)(temp.data), temp.cols, temp.rows, temp.step, QImage::Format_RGB888);
+   ui->label->setPixmap(QPixmap::fromImage(Qtemp));
+   ui->label->resize(Qtemp.size());
+   ui->label->show();
+```

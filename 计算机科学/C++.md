@@ -504,3 +504,5 @@ int main ()
    return 0;
 }
 ```
+
+![](src/2023-02-26-14-11-33-image.png)
