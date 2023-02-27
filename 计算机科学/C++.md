@@ -497,18 +497,12 @@ pp1->age;
 //可用这两种方法来查看类成员变量；
 ```
 
-
-
 2.常规初始化
 
 ```cpp
 Person pp1 = new Person{30,40};
 // Person pp1( new Person{30,40} )；这样是错误的写法
 ```
-
-
-
-
 
 ## namespace
 
