@@ -201,6 +201,7 @@ void main()
     swap(x,y); //实现x，y的交换
 
 }
+// 通过引用改变了xy的
 ```
 
 ```c
@@ -212,6 +213,18 @@ int & test()
     return a ; //是错误的  不能返回局部变量的应用
     return b； //可以返回静态的变量引用
 }
+```
+
+**3.传递指向指针的引用**
+
+```cpp
+void ptrswap(int *&v1,int *&v2)
+{
+    int *tmp = v2;
+    v2 = v1;
+    v1 = tmp;
+}
+// 作用是使用“指向指针的引用”来交换两个指针
 ```
 
 ## 内联函数
@@ -472,6 +485,31 @@ Person* pp1( new Person{30,40} );
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
 ```
 
+使用`new`关键字来初始化对象：
+
+1.类对象指针
+
+```cpp
+Person* pp1( new Person{30,40} );
+// 此时pp1是指向类对象的一个指针
+pp1->age;
+(*pp1).age;
+//可用这两种方法来查看类成员变量；
+```
+
+
+
+2.常规初始化
+
+```cpp
+Person pp1 = new Person{30,40};
+// Person pp1( new Person{30,40} )；这样是错误的写法
+```
+
+
+
+
+
 ## namespace
 
 同名函数/类，要区分
@@ -505,4 +543,35 @@ int main ()
 }
 ```
 
-![](src/2023-02-26-14-11-33-image.png)
+## 指针
+
+```
+double dval; 
+double *pd=&dval;
+double*pd2=pd;
+```
+
+这段c++代码中，pd指什么？
+
+> 这段代码中，pd是一个指向double类型的指针，它指向了dval的地址。也就是说，pd存储了dval的内存位置，你可以通过*pd来访问或修改dval的值。pd2也是一个指向double类型的指针，它被赋值为pd，所以它也指向了dval的地址。你可以通过*pd2来访问或修改dval的值。
+
+**指针声明：**
+
+```cpp
+int ival = 1024;
+int *p = &ival;
+int **p = &p;
+// int *p说明p是指针
+```
+
+## 数组与指针
+
+```cpp
+int ia[] = {0,1,2,3,4,5};
+int *ip = ia;
+// ip自动指向ia[0]
+
+
+int *p2 = ip+4;
+// p2指向4
+```
