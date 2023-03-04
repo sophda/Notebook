@@ -282,6 +282,24 @@ public class movecam : MonoBehaviour
 }
 ```
 
+
+
+## 场景加载
+
+加载场景的方式
+
+```csharp
+SceneManger.LoadScene("Myscene",LoadSceneMode.Single)
+```
+
+> LoadSceneMode.Single：覆盖之前的场景
+> 
+> LoadSceneMode.Additive:在原来场景的基础上加载
+
+
+
+
+
 # CardBoard VR
 
 您可以使用 Cardboard SDK 将智能手机转变成 VR 平台。智能手机可以呈现立体呈现的 3D 场景、跟踪头部移动并做出反应，还能通过检测用户何时按观看者按钮来与应用互动。
@@ -608,3 +626,10 @@ public class TreeCtrl : MonoBehaviour
 2.直接在官方默认的hellocardboard里面开始折腾就可以了哦~
 
 3.官方的light要调节一下，否则看不清地形的材质
+
+
+
+## test
+
+
+
