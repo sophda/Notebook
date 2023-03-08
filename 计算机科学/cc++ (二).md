@@ -179,9 +179,9 @@ int main()
 
 > 类与结构体的区别：
 >
-> 1. 
-
-
+> 类可以指定成员是否可以被访问
+>
+> 使用public、private等关键词
 
 1. 引用和类对象结合
 
@@ -198,4 +198,9 @@ int main()
    }
    ```
 
-   这里move函数传入了类Player的对象的引用，相当于传入了一个实例化的player的别名（reference）
+   **这里move函数传入了类Player的对象的引用**，相当于传入了一个实例化的player的别名（reference）
+
+  ## 6.static in c++
+
+使用static来指定变量，那么这个变量在link的时候只对这个编译单元（obj）里的东西可见
+
