@@ -204,3 +204,221 @@ int main()
 
 使用static来指定变量，那么这个变量在link的时候只对这个编译单元（obj）里的东西可见
 
+## 7.类中的继承
+
+```cpp
+class Entity
+{
+public:
+	void move();
+}
+class player : public Entity
+{
+public: 
+	int x;
+	
+}
+int main()
+{
+	Player player;
+	player.move();
+	player.x = 5;
+}
+
+// player对象继承了父类entity的所有内容
+```
+
+## 8.虚函数
+
+```cpp
+#include<iostream>
+#include<string>
+using namespace std;
+class Entity
+{
+public:
+	std::string GetName(){ reuturn "Entity"; }
+};
+class Player : public Entity
+{
+private :
+	std::string m_Name;
+public:
+	Player(const std::string& name)
+	:m_Name(name){}
+	std::string GetName(){ return  m_Name;}
+}
+
+int main()
+{
+	Entity* e = new Entity();
+    // 这里是一个对象指针
+	std::cout<<e->GetName() <<std::endl;
+	
+	Player* p = new Player("hello");
+	std::cout << p->GetName() << std::endl;
+	
+}
+// 此时会正常输出
+```
+
+```cpp
+// 但是当把main函数改为
+int main()
+{
+	Entity* e = new Entity();
+	//std::cout<<e->GetName() <<std::endl;
+	
+	Player* p = new Player("hello");
+	//std::cout << p->GetName() << std::endl;
+	
+	Entity* entity = p;
+	cout<<entity->GetName()<<endl;
+	
+}
+// 此时会输出entity
+```
+
+```cpp
+void printName(Entity* entity)
+{
+	cout<< entity->GetName() <<endl;
+}
+
+// 但是当把main函数改为
+int main()
+{
+	Entity* e = new Entity();
+	printName(e);
+	
+	Player* p = new Player("hello");
+	printName(p);
+//按道理来说，printName(e);会打印entity
+// printname(p)会打印hello
+//  但是printName()这个函数入口的是 entity类的，所以会访问
+//entity的方法，不会访问player的
+}
+
+```
+
+但是！！ 改写了root类之后：
+
+```cpp
+#include<iostream>
+#include<string>
+using namespace std;
+class Entity
+{
+public:
+	virtual std::string GetName(){ reuturn "Entity"; }
+};
+class Player : public Entity
+{
+private :
+	std::string m_Name;
+public:
+	Player(const std::string& name)
+	:m_Name(name){}
+	std::string GetName(){ return  m_Name;}
+}
+```
+
+此时：
+
+```cpp
+void printName(Entity* entity)
+{
+	cout<< entity->GetName() <<endl;
+}
+
+// 但是当把main函数改为
+int main()
+{
+	Entity* e = new Entity();
+	printName(e);
+	
+	Player* p = new Player("hello");
+	printName(p);
+// 因为root类实用virtual,所以子类会对GetName()方法进行改  // 写。printName(e)会打印entity
+// printname(p)会打印hello
+
+}
+```
+
+**纯虚函数：**
+
+```cpp
+class Entity
+{
+public:
+	virtual std::string GetName()=0;
+}
+// 令这个函数为零，则必须在子类里定义
+//
+Entity *e = new Entity();
+// 也是错误的，因为GetName么有定义
+
+```
+
+## 9.初始化 ：
+
+```cpp
+class example
+{
+private:
+	int x,y,z;
+	std::string m_Name;
+public:
+	example()
+		// 这是初始化的操作
+		:x(0),y(0),z(0),m_Name("hello")
+		{
+		
+		}
+}
+```
+
+但是，但我们将初始化不用：表示时，
+
+```cpp
+class example
+{
+private:
+	int x,y,z;
+	std::string m_Name;
+	// 在这里构造了一次
+public:
+	example()
+		// 这是初始化的操作
+		:x(0),y(0),z(0)
+		{
+		m_Name = "hello";
+		//不用：进行初始化，这里会把上面初始化的删除，
+		// 然后再用“hello”覆盖掉上面的
+		// 所以是构造了两次，浪费了性能
+		}
+}
+```
+
+## 10. new 关键词
+
+> new 关键词返回指针！！！
+
+```cpp
+class Entity
+{
+public:
+	Entity()
+	{}
+}
+
+int main()
+{
+	Entity* entity = new Entity();
+	// 这句话会执行类的初始化
+    Entity* b = (Entity*)malloc(sizeof(Entity))
+    // 仅仅申请Entity大小的空间，b指向这段空间。没有初始化过程
+}
+            
+```
+
