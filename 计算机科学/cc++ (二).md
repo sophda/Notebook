@@ -422,3 +422,174 @@ int main()
             
 ```
 
+
+
+## 11.隐式转换
+
+
+
+```cpp
+class Entity
+{
+public:
+	int m_age;
+	Entity(int age)
+		:m_age(age)
+		{}
+}
+
+int main()
+{
+	Entity a = 22;
+	// 此时会发生隐式转换
+	Entity b(20);
+	// 这样是显式转换
+}
+```
+
+但是，如果在构造函数前放一个`explicit`关键词，那么隐式转换`implicit`就会被屏蔽，从而使用显式的构造函数
+
+```
+class Entity
+{
+public:
+	int m_age;
+	explicit Entity(int age)
+		:m_age(age)
+		{}
+}
+
+int main()
+{
+	Entity a = 22; //error
+	// 此时隐式转换会错误
+	
+	Entity b(20);
+	// 只能用显式转换
+	Entity b = Entity(20);
+	// 这样也可以
+}
+```
+
+
+
+## 12.堆和栈
+
+1. 栈的作用域：{}，所以一旦离开了栈的作用域，作用域内的内容会消失
+
+2. 使用new关键词新建的内容是在**堆**上，所以即使是离开{}的作用域，指针也会继续存在 
+
+**作用域指针(类)：**
+
+> 这一类指针同样在**作用域内生效**，尽管使用new申请了堆上的内存，**但是离开作用域时，对象也会析构** 
+>
+> **这就是智能指针哦**
+
+> ScopedPtr是一个智能指针，它包装了new操作符在堆上分配的动态对象，能够保证动态创建的对象在任何时候都可以被正确地删除。它与auto_ptr/unique_ptr类似，但是它不能被复制或赋值给其他指针
+>
+> e是一个ScopedPtr类型的变量，它指向一个Entity类的对象。当e离开作用域时（即大括号结束时），它会自动调用析构函数来删除指向的Entity对象。
+
+> ScopedPtr e = new Entity(); 这段话会执行以下步骤：（**发生隐式转换**，new返回指针，然后赋值给m_Ptr）
+>
+> 1. 使用new表达式在堆上分配一个Entity类的对象，并返回一个指向它的指针。
+> 2. 调用ScopedPtr的构造函数，将这个指针作为参数传递，并将它赋值给m_Ptr成员变量。
+> 3. 创建一个ScopedPtr类型的变量e，它包装了这个指针，并管理它的生命周期
+
+```cpp
+class ScopedPtr
+{
+private:
+	Enitty* m_Ptr;
+public:
+	ScopedPtr(Entity* ptr)
+		:m_Ptr(ptr)
+		{}
+	~ScopedPtr()
+	{
+        delete m_Ptr;
+    }
+};
+
+int main()
+{
+	{
+	ScopedPtr e = new Entity();
+	}
+}
+```
+
+
+
+## 13.智能指针
+
+> 智能指针实际上是对传统指针的包装，当创建智能指针时，会调用new并分配内存。在不适用时会自动删除。
+>
+> 也就是避免了new和delete的过程
+
+**1.unique_ptr:**
+
+作用域指针，超出作用域时，会被销毁，然后调用delete
+
+【**warning**】unique_ptr不能够复制，一旦复制，当一个指针被释放，另一个指针会指向被释放的内存。所以叫做unique指针~独一无二的哈~
+
+> unique_ptr是一个显示转换，所以不能用`unique_ptr<Entity> entity=new Enitty()`这种隐式转换
+>
+> ![image-20230319225242197](src/image-20230319225242197.png)
+
+```cpp
+class Entity
+{
+public:
+	Entity()
+	{}
+	~Entity()
+	{}
+}
+
+int main()
+{
+	std::unique_ptr<Entity> entity(new Entity());
+    // <>内的是模板参数
+}
+```
+
+```cpp
+int main()
+{
+	std::unique_ptr<Entity> entity = std::make_unique<Entity>();
+	// c++14引入，这种构造方式更加安全，不会得到没引用的悬空指针，从而不会造成内存泄露
+}
+```
+
+**2.shared_ptr**
+
+通过引用计数，可以跟踪指针有多少引用，一旦引用计数为0，那么就被删除了
+
+> 1. 在unique_ptr中，不直接调用new保证异常安全
+> 2. 在shared_ptr中，需要分配另一块内存，叫做控制块，用来存储引用计数，可以用new
+
+```cpp
+int main()
+{
+	std::shared_ptr<Entity> sharedEntity = std::make_shared<Entity>();
+	// OR:
+	std::shared_ptr<Entity> sharedEntity1(new Entity())
+        
+    //此时shared_ptr也可以进行复制操作
+    std::shared_ptr<Entity> e0 = sharedEntity;
+}
+```
+
+```cpp
+int main()
+{
+	{
+	std::shared_ptr<Entity> e0;//执行完这句，创建了Entity类的空指针，没有执行构造函数
+	{
+	std::shared_ptr<Entity> sharedEntity = std::make_shared<Entity>();//执行这句，在堆上新建了Entity对象（执行构造函数），然后返回类的指针给sharedEntity
+	e0 = sharedEntity; //将共享指针复制
+	} //{}作用域内执行完毕，在{}的变量销毁，sharedEntity会被销毁，还保留e0，shared_ptr的引用数为1
+	} //执行完后，e0被销毁，shared_ptr应用数为0，指针对象执行析构函数
+}
+```
+

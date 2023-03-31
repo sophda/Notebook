@@ -580,3 +580,275 @@ int *p2 = ip+4;
 - 使用unique_ptr或其他智能指针来初始化或赋值shared_ptr。这种方法会转移所有权，并且可以指定自定义删除器。例如：`auto up = unique_ptr<int>(new int(42)); auto sp = shared_ptr<int>(move(up));`
 
 使用shared_ptr时，可以通过解引用运算符（*）或箭头运算符（->）来访问其所管理的对象，也可以通过get()函数来获取原始指针，或者通过use_count()函数来获取共享所有权的数量。
+
+
+
+## 一个类包含另一个类的初始化
+
+```cpp
+#include<iostream>
+using namespace std;
+class A
+{
+public:
+	A()
+	{
+		cout << "A is constructed!" << endl;
+	}
+};
+class B
+{
+private:
+	A a;
+public:
+	B()
+	{
+		a = A();
+		cout << "B is constructed!" << endl;
+	}
+};
+int main()
+{
+	B b = B{};
+ 
+	system("pause");
+}
+```
+
+这时候，A一共初始化了两次，1、b在确立时a进行了初始化，2、b在执行初始化时A有进行了初始化
+
+**为了避免重复初始化消耗内存，如何才能让a只初始化一次呢？**
+
+可以用指针来解决：
+
+```cpp
+#include<iostream>
+using namespace std;
+class A
+{
+public:
+	A()
+	{
+		cout << "A is constructed!" << endl;
+	}
+};
+class B
+{
+private:
+	A *a;
+public:
+	B()
+	{
+		a = new A();
+		cout << "B is constructed!" << endl;
+	}
+	~B()
+	{
+		delete a;
+	}
+};
+int main()
+{
+	B b = B{};
+	system("pause");
+}
+```
+
+b在构造时，只是创造了个A类型的空指针，在执行构造函数，即b初始化时，会把A类型的空指针指向new出来的A（）对象，也就是A初始化了一次。
+
+【**总结**】**：一个类包含另外一个类，在声明类成员变量时，声明一个指针，然后在构造函数中，或其他类成员函数中将指针指向具体的对象。**欧耶~
+
+
+
+
+
+## 函数传递vector
+
+c++中常用的[vector](https://so.csdn.net/so/search?q=vector&spm=1001.2101.3001.7020)容器作为参数时，有三种传参方式，分别如下（为说明问题，用二维vector）：
+
+- function1(std::vector<std::vector > vec)，传值
+- **function2(std::vector<std::vector >& vec)，传引用**
+- function3(std::vector<std::vector >* vec)，传指针
+
+三种方式对应的调用形式分别为：
+
+- function1(vec)，传入值
+- **function2(vec)，传入引用**
+- function3(&vec), 传入地址
+
+> 1. 传入值是传入的形参，对实参本身不会造成影响
+> 2. 传入引用是传入的变量的别名，可以改变原参数的值。与传值相比，可以节省开支
+> 3. 传入指针：在函数内部的栈内可以直接修改原来的参数
+>
+> 传入参数要进行操作，所以一定要初始化
+
+```cpp
+#include <iostream>
+#include <vector>
+
+using namespace std;
+
+void function1(std::vector<std::vector<int> > vec)
+{
+    cout<<"-----------------------------------------"<<endl;
+    //打印vec的地址
+    cout<<"function1.&vec:"<<&vec<<endl;
+    //打印vec[i]的地址（即第一层vector的地址）
+    cout<<"function1.&vec[i]:"<<endl;
+    for(int i=0;i<2;i++)
+        cout<<&vec[i]<<endl;
+    //打印vec的各元素地址
+    cout<<"function1.&vec[i][j]:"<<endl;
+    for(int i=0;i<2;i++)
+    {
+        for(int j=0;j<3;j++)
+            cout<<&vec[i][j]<<" ";
+        cout<<endl;
+    }
+    cout<<"---------------------------"<<endl;
+    //打印vec的各元素值
+    cout<<"function1.vec[i][j]:"<<endl;
+    vec[0][0] = 10000;//进行修改的
+    for(int i=0;i<2;i++)
+    {
+        for(int j=0;j<3;j++)
+            cout<<vec[i][j]<<" ";
+        cout<<endl;
+    }
+
+}
+void function2(std::vector<std::vector<int> >& vec)
+{
+    cout<<"-----------------------------------------"<<endl;
+    //打印vec的地址
+    cout<<"function2.&vec:"<<&vec<<endl;
+    //打印vec[i]的地址（即第一层vector的地址）
+    cout<<"function2.&vec[i]:"<<endl;
+    for(int i=0;i<2;i++)
+        cout<<&vec[i]<<endl;
+    //打印vec的各元素地址
+    cout<<"function2.&vec[i][j]:"<<endl;
+    for(int i=0;i<2;i++)
+    {
+        for(int j=0;j<3;j++)
+            cout<<&vec[i][j]<<" ";
+        cout<<endl;
+    }
+    cout<<"---------------------------"<<endl;
+    //打印vec的各元素值
+    cout<<"function2.vec[i][j]:"<<endl;
+    vec[0][0] = 10000;//进行修改的
+    for(int i=0;i<2;i++)
+    {
+        for(int j=0;j<3;j++)
+            cout<<vec[i][j]<<" ";
+        cout<<endl;
+    }
+
+}
+void function3(std::vector<std::vector<int> > *vec)
+{
+    cout<<"-----------------------------------------"<<endl;
+    //打印vec的地址
+    cout<<"function3.&vec:"<<vec<<endl;
+    //打印vec[i]的地址（即第一层vector的地址）
+    cout<<"function3.&vec[i]:"<<endl;
+    for(int i=0;i<2;i++)
+        cout<<&(*vec)[i]<<endl;
+    //打印vec的各元素地址
+    cout<<"function3.&vec[i][j]:"<<endl;
+    for(int i=0;i<2;i++)
+    {
+        for(int j=0;j<3;j++)
+            cout<<&(*vec)[i][j]<<" ";
+        cout<<endl;
+    }
+    cout<<"---------------------------"<<endl;
+    //打印vec的各元素值
+    cout<<"function3.vec[i][j]:"<<endl;
+    (*vec)[0][0] = 10000;//进行修改的
+    for(int i=0;i<2;i++)
+    {
+        for(int j=0;j<3;j++)
+            cout<<(*vec)[i][j]<<" ";
+        cout<<endl;
+    }
+}
+
+int main()
+{
+    //创建2*3的vector容器v,初始值均初始化为0 1 2 1 2 3
+    std::vector<std::vector<int> > v(2,std::vector<int>(3,0));
+    for(int i=0;i<2;i++)
+    {
+        for(int j=0;j<3;j++)
+            v[i][j]=i+j;
+    }
+
+    //打印v的地址
+    cout<<"&v:"<<&v<<endl;
+    //打印v[i]的地址（即第一层vector的地址）
+    cout<<"&v[i]:"<<endl;
+    for(int i=0;i<2;i++)
+        cout<<&v[i]<<endl;
+    //打印v的各元素地址
+    cout<<"&v[i][j]:"<<endl;
+    for(int i=0;i<2;i++)
+    {
+        for(int j=0;j<3;j++)
+            cout<<&v[i][j]<<" ";
+        cout<<endl;
+    }
+
+    cout<<"---------------------------"<<endl;
+    //打印v的各元素值
+    cout<<"v[i][j]:"<<endl;
+    for(int i=0;i<2;i++)
+    {
+        for(int j=0;j<3;j++)
+            cout<<v[i][j]<<" ";
+        cout<<endl;
+    }
+
+    function1(v);
+
+    cout<<"---------------------------"<<endl;
+    //打印v的各元素值
+    cout<<"v[i][j]:"<<endl;
+    for(int i=0;i<2;i++)
+    {
+        for(int j=0;j<3;j++)
+            cout<<v[i][j]<<" ";
+        cout<<endl;
+    }
+
+
+    function2(v);
+
+    cout<<"---------------------------"<<endl;
+    //打印v的各元素值
+    cout<<"v[i][j]:"<<endl;
+    for(int i=0;i<2;i++)
+    {
+        for(int j=0;j<3;j++)
+            cout<<v[i][j]<<" ";
+        cout<<endl;
+    }
+
+    function3(&v);
+    cout<<"---------------------------"<<endl;
+    //打印v的各元素值
+    cout<<"v[i][j]:"<<endl;
+    for(int i=0;i<2;i++)
+    {
+        for(int j=0;j<3;j++)
+            cout<<v[i][j]<<" ";
+        cout<<endl;
+    }
+
+    return 0;
+}
+
+
+```
+
