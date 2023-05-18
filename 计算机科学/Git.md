@@ -100,4 +100,27 @@ git push
 
 最多保存分支，然后更新master
 
-# 
+## 新建+提交分支
+
+```
+git branch node   //新建分支
+git checkout node //切换分支
+git add .         // 添加到缓存区
+git commit -m ""  // 提交到本地git
+git push origin node  // 提交到服务器
+```
+
+
+
+
+
+## .gitignore不起作用
+
+其实这个文件里的规则对已经追踪的文件是没有效果的，所以我们需要使用 rm 命令清除一下相关的缓存内容，这样文件将以未追踪的形式出现，然后再重新添加提交一下 .gitignore 文件里的规则就可以起作用了。
+
+```
+git rm -r --cached .
+git add .
+git commit -m "update .gitignore"  // windows使用的命令时，需要使用双引号
+```
+
