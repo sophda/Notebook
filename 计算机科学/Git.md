@@ -124,3 +124,13 @@ git add .
 git commit -m "update .gitignore"  // windows使用的命令时，需要使用双引号
 ```
 
+
+
+##  回滚操作
+
+```
+使用git log命令，查看分支提交历史，确认需要回退的版本
+使用git reset --hard commit_id命令，进行版本回退
+使用git push origin命令，推送至远程分支
+```
+
