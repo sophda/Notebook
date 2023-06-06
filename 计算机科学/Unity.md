@@ -633,3 +633,18 @@ public class TreeCtrl : MonoBehaviour
 
 
 
+# 模型的导入
+
+## blender模型
+
+可以直接导入fbx格式的模型，这个基本上包含了光照、纹理等
+
+## 点云或者ply文件导入
+
+1. ply文件，首先转换为pcd的点云格式
+2. pcd文件，间接显示，主要是利用unity的粒子系统，把点云中的每个点用粒子系统渲染出来，一个个加进去
+3. 有个插件叫做point cloud viewer，但是对vr支持不太行，盲猜是渲染引擎的问题，手机上用的是Vulcan
+
+## mashroom等obj+mtl的
+
+这就很方便了，obj是默认不带顶点颜色的，把所有文件（obj+mtl配置文件+贴图文件）导入到unity中，然后可以直接观察到带纹理的模型，这就很方便。这种方法可以同样导入到blender中，然后再纹理视图可以观察到有色的模型。

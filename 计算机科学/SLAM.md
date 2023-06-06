@@ -332,3 +332,7 @@ rosdep update
 3. lboost问题
    
    ![](src/2023-02-14-04-17-39-image.png)
+
+**结果：**
+
+![image-20230606230423975](src/image-20230606230423975.png)
