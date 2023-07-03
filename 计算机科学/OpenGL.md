@@ -382,7 +382,71 @@ glDeleteShader(fragmentShader);
 
 **1.顶点着色器：**可以从顶点数据中直接接受输入，为了方便定义，使用`location`指定输入变量，这样就可以在cpu上配置顶点属性。
 
-**2.片段着色器：**需要接受一个`vec4`颜色输出变量，会生成一个最终输出的颜色。
+```
+#version 330 core
+layout (location = 0) in vec3 aPos;
+
+void main()
+{
+    gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
+}
+```
+
+使用`in`关键词，表示顶点着色器的输入属性，比如输入顶点的位置信息。
+
+**2.片段着色器：**片段着色器是计算最后的颜色输出，需要输出一个`vec4`颜色输出变量，会生成一个最终输出的颜色。
+
+```
+#version 330 core
+out vec4 FragColor;
+
+void main()
+{
+    FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
+} 
+```
+
+### 绘制流程
+
+我们使用一个顶点缓冲对象将顶点数据初始化至缓冲中，建立了一个顶点和一个片段着色器，并告诉了OpenGL如何把顶点数据链接到顶点着色器的顶点属性上。在OpenGL中绘制一个物体，代码会像是这样：（VBO->VAO->绑定缓冲->顶点数据解析与链接到着色器）
+
+```c++
+// 0. 复制顶点数组到缓冲中供OpenGL使用
+glBindBuffer(GL_ARRAY_BUFFER, VBO); // vbo与缓冲绑定
+// 将顶点数据传送至GPU内存 
+glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW); 
+
+
+// 1. 设置顶点属性指针，告诉OpenGL解析顶点数据，并连接到顶点着色器。
+glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+glEnableVertexAttribArray(0);
+// 2. 当我们渲染一个物体时要使用着色器程序
+glUseProgram(shaderProgram);
+// 3. 绘制物体
+someOpenGLFunctionThatDrawsOurTriangle();
+```
+
+**当使用VAO时：**
+
+```c
+// ..:: 初始化代码（只运行一次 (除非你的物体频繁改变)） :: ..
+// 1. 绑定VAO
+glBindVertexArray(VAO);
+// 2. 把顶点数组复制到缓冲中供OpenGL使用
+glBindBuffer(GL_ARRAY_BUFFER, VBO);
+glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+// 3. 设置顶点属性指针
+glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+glEnableVertexAttribArray(0);
+
+[...]
+
+// ..:: 绘制代码（渲染循环中） :: ..
+// 4. 绘制物体
+glUseProgram(shaderProgram);
+glBindVertexArray(VAO);
+someOpenGLFunctionThatDrawsOurTriangle();
+```
 
 
 
@@ -424,3 +488,206 @@ glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
 
    设置/更新uniform的值。查询uniform地址不要求你之前使用过着色器程序，但是更新一个uniform之前你**必须**先使用程序（调用glUseProgram)，因为它是在当前激活的着色器程序中设置uniform的。
 
+
+
+## 纹理
+
+
+
+
+
+## 变换
+
+
+
+
+
+
+
+# 模型加载
+
+## Assimp编译
+
+1. 直接下载最新版的assimp包，在GitHub上
+
+2. 按照传统cmake构建方式，然后编译
+
+3. 在build文件里会生成.so文件，需要在实际项目中链接该库文件
+
+   把文件放到AssimpLib中，然后：
+
+   ```
+   link_directories(AssimpLib)
+   
+   target_link_libraries(${PROJECT_NAME}
+           -lGLEW -lglfw3 -lGL -lX11 -lpthread -lXrandr -lXi -ldl libassimp.so)
+   ```
+
+   
+
+## assimp介绍
+
+1. Assimp能够导入很多种不同的模型文件格式（并也能够导出部分的格式），它会将所有的模型数据加载至Assimp的通用数据结构中。
+2. 当Assimp加载完模型之后，我们就能够从Assimp的数据结构中提取我们所需的所有数据了。由于Assimp的数据结构保持不变，不论导入的是什么种类的文件格式，它都能够将我们从这些不同的文件格式中抽象出来，用同一种方式访问我们需要的数据。
+
+**导入方式：**
+
+当使用Assimp导入一个模型的时候，它通常会将整个模型加载进一个**场景**(Scene)对象，它会包含导入的模型/场景中的所有数据。Assimp会将场景载入为一系列的节点(Node)，每个节点包含了场景对象中所储存数据的索引，每个节点都可以有任意数量的子节点。Assimp数据结构的（简化）模型如下：
+
+![img](src/assimp_structure.png)
+
+## 导入3D模型到OpenGL
+
+1. 首先需要调用的函数是loadModel，它会从构造器中直接调用。在loadModel中，我们使用Assimp来加载模型至Assimp的一个叫做scene的数据结构中。Assimp很棒的一点在于，它抽象掉了加载不同文件格式的所有技术细节，只需要一行代码就能完成所有的工作：
+
+   ```c++
+   Assimp::Importer importer;
+   const aiScene *scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs);
+   ```
+
+   - aiProcess_Triangulate，我们告诉Assimp，如果模型不是（全部）由三角形组成，它需要将模型所有的图元形状变换为三角形。
+
+   - aiProcess_FlipUVs将在处理的时候**翻转y轴的纹理坐标**（你可能还记得我们在[纹理](https://learnopengl-cn.github.io/01 Getting started/06 Textures/)教程中说过，在OpenGL中大部分的图像的y轴都是反的，所以这个后期处理选项将会修复这个）。我靠？我导入凌华小姐的pmx model，竟然不用反转？
+
+   - aiProcess_GenNormals：如果模型不包含法向量的话，就为每个顶点创建法线。
+   - aiProcess_SplitLargeMeshes：将比较大的网格分割成更小的子网格，如果你的渲染有最大顶点数限制，只能渲染较小的网格，那么它会非常有用。
+   - aiProcess_OptimizeMeshes：和上个选项相反，它会将多个小网格拼接为一个大的网格，减少绘制调用从而进行优化。
+
+   完整的加载模型函数为：
+
+   ```c++
+   void loadModel(string path)
+   {
+       Assimp::Importer import;
+       const aiScene *scene = import.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs);    
+   
+       if(!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) 
+       {
+           cout << "ERROR::ASSIMP::" << import.GetErrorString() << endl;
+           return;
+       }
+       directory = path.substr(0, path.find_last_of('/'));
+   
+       processNode(scene->mRootNode, scene);
+   }
+   ```
+
+   
+
+2. 获取每个节点的网格索引。Assimp的结构中，每个节点包含了一系列的网格索引，每个索引指向场景对象中的那个特定网格。我们接下来就想去获取这些网格索引，获取每个网格，处理每个网格，接着对每个节点的子节点重复这一过程。processNode函数的内容如下：
+
+   ```
+   void processNode(aiNode *node, const aiScene *scene)
+   {
+       // 处理当前节点所有的网格（如果有的话）
+       for(unsigned int i = 0; i < node->mNumMeshes; i++)
+       {
+           aiMesh *mesh = scene->mMeshes[node->mMeshes[i]]; 
+           meshes.push_back(processMesh(mesh, scene));         
+       }
+       // 接下来对它的子节点重复这一过程
+       for(unsigned int i = 0; i < node->mNumChildren; i++)
+       {
+       	// 递归调用哦
+           processNode(node->mChildren[i], scene);
+       }
+   }
+   ```
+
+   我们首先检查每个节点的网格索引，并索引场景的mMeshes数组来获取对应的网格。返回的网格将会**传递到processMesh函数**中，它会返回一个Mesh对象，我们可以将它存储在meshes列表/vector。
+
+3. **将aiMesh转化为我们自己的网格对象**。我们要做的只是访问网格的相关属性并将它们储存到我们自己的对象中。processMesh函数的大体结构如下：
+
+   ```c++
+   Mesh processMesh(aiMesh *mesh, const aiScene *scene)
+   {
+       vector<Vertex> vertices;
+       vector<unsigned int> indices;   
+       vector<Texture> textures;
+   
+       for(unsigned int i = 0; i < mesh->mNumVertices; i++)
+       {
+           Vertex vertex;
+           // 处理顶点位置、法线和纹理坐标
+           ...
+           vertices.push_back(vertex);
+       }
+       // 处理索引
+       ...
+       // 处理材质
+       if(mesh->mMaterialIndex >= 0)
+       {
+           ...
+       }
+   
+       return Mesh(vertices, indices, textures);
+   }
+   ```
+
+   处理网格的过程主要有三部分：获取所有的顶点数据，获取它们的网格索引，并获取相关的材质数据。
+
+   获取顶点数据非常简单，我们定义了一个Vertex结构体，我们将在每个迭代之后将它加到vertices数组中。我们会遍历网格中的所有顶点（使用`mesh->mNumVertices`来获取，这个就是顶点位置数组）。在每个迭代中，我们希望使用所有的相关数据填充这个结构体。顶点的位置是这样处理的：
+
+   ```c++
+   glm::vec3 vector; 
+   vector.x = mesh->mVertices[i].x;
+   vector.y = mesh->mVertices[i].y;
+   vector.z = mesh->mVertices[i].z; 
+   vertex.Position = vector;
+   ```
+
+4. 索引，面。Assimp的接口定义了每个网格都有一个面(Face)数组，每个面代表了一个图元，在我们的例子中（由于使用了aiProcess_Triangulate选项）它总是三角形。一个面包含了多个索引，它们定义了在每个图元中，我们应该绘制哪个顶点，并以什么顺序绘制，所以如果我们遍历了所有的面，并储存了面的索引到indices这个vector中就可以了。
+
+   ```
+   for(unsigned int i = 0; i < mesh->mNumFaces; i++)
+   {
+       aiFace face = mesh->mFaces[i];
+       for(unsigned int j = 0; j < face.mNumIndices; j++)
+           indices.push_back(face.mIndices[j]);
+   }
+   ```
+
+   所有的外部循环都结束了，我们现在有了一系列的顶点和索引数据，它们可以用来**通过glDrawElements函数来绘制网格**。
+
+5. 材质。和节点一样，一个网格只包含了一个指向材质对象的索引（scene包括三个部分，见上图）。如果**想要获取网格真正的材质，我们还需要索引场景的mMaterials数组**。网格材质索引位于它的mMaterialIndex属性中，我们同样可以用它来检测一个网格是否包含有材质：
+
+   ```c++
+   if(mesh->mMaterialIndex >= 0)
+   {
+       aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
+       vector<Texture> diffuseMaps = loadMaterialTextures(material, 
+                                           aiTextureType_DIFFUSE, "texture_diffuse");
+       textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
+       vector<Texture> specularMaps = loadMaterialTextures(material, 
+                                           aiTextureType_SPECULAR, "texture_specular");
+       textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
+   }
+   ```
+
+   我们首先从场景的mMaterials数组中获取`aiMaterial`对象。接下来我们希望加载网格的漫反射和/或镜面光贴图。一个材质对象的内部对每种纹理类型都存储了一个纹理位置数组。不同的纹理类型都以`aiTextureType_`为前缀。我们**使用一个叫做loadMaterialTextures的工具函数来从材质中获取纹理**。这个函数将会返回一个Texture结构体的vector，我们将在模型的textures vector的尾部之后存储它。
+
+   loadMaterialTextures函数遍历了给定纹理类型的所有纹理位置，获取了纹理的文件位置，并加载并和生成了纹理，将信息储存在了一个Vertex结构体中。它看起来会像这样：
+
+   ```
+   vector<Texture> loadMaterialTextures(aiMaterial *mat, aiTextureType type, string typeName)
+   {
+       vector<Texture> textures;
+       for(unsigned int i = 0; i < mat->GetTextureCount(type); i++)
+       {
+           aiString str;
+           mat->GetTexture(type, i, &str);
+           Texture texture;
+           texture.id = TextureFromFile(str.C_Str(), directory);
+           texture.type = typeName;
+           texture.path = str;
+           textures.push_back(texture);
+       }
+       return textures;
+   }
+   ```
+
+   我们首先**通过GetTextureCount函数检查储存在材质中纹理的数量，这个函数需要一个纹理类型。我们会使用GetTexture获取每个纹理的文件位置，它会将结果储存在一个`aiString`中。我们接下来使用另外一个叫做TextureFromFile的工具函数，它将会（用`stb_image.h`）加载一个纹理并返回该纹理的ID。**如果你不确定这样的代码是如何写出来的话，可以查看最后的完整代码。
+
+## Animation
+
+> 将顶点分配给骨骼时，将定义权重，以确定骨骼的影响量 在顶点上移动时。常见的做法是将所有权重的总和设为 1（每个顶点）。例如，如果顶点 正好位于两块骨骼之间，我们可能希望为每个骨骼分配 0.5 的权重，因为我们期望 骨骼对顶点的影响相等。但是，如果顶点完全在单个骨骼的影响范围内 那么权重将为 1（这意味着骨骼自主控制顶点的运动）。
