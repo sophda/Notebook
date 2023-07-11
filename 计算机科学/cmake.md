@@ -96,7 +96,7 @@ include_directories($ENV{INCLUDE_PATH}/include)
 
 一个cmake总工程可以包含多个子工程，总工程引入的头文件，并不代表子工程就可以用，就好比幼儿园老师（总工程）买来一箱苹果，小朋友（子工程）根据需求拿苹果。
 
-
+引入的头文件如果需要了其他的文件，还需要使用add_executable把对应的文件包含进去
 
 ## link_directories
 
@@ -143,3 +143,6 @@ target_link_libraries(子工程名 库文件1 库文件2 ...)     # 注意子工
 ## target_include_directories
 
 **引入头文件目录到子工程**，
+
+
+
