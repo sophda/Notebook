@@ -2,6 +2,18 @@
 
 *COPYRIGHT @ SOPHDA *
 
+## 使用vsc编写代码
+
+在edit->preference中制定好vsc的路径，然后打开vsc，安装c#插件。如果想有代码提示，还需要安装.net框架，这部分按照vsc的提示来就好，在安装完成之后需要重新启动下windows。
+
+> 如果还不行，可以使用下面的：把两项勾上
+>
+> ![image-20230713194349397](src/image-20230713194349397.png)
+>
+> 成功的标志是：有csproj这个文件
+>
+> ![image-20230713210038410](src/image-20230713210038410.png)
+
 # Unity基础操作
 
 使用unity个人版，教程链接：[2.3 Unity窗口布局_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1TZ4y1o76s?p=6&vd_source=bd4e6ed09b1d6487743fbfd26167e229)
@@ -648,3 +660,63 @@ public class TreeCtrl : MonoBehaviour
 ## mashroom等obj+mtl的
 
 这就很方便了，obj是默认不带顶点颜色的，把所有文件（obj+mtl配置文件+贴图文件）导入到unity中，然后可以直接观察到带纹理的模型，这就很方便。这种方法可以同样导入到blender中，然后再纹理视图可以观察到有色的模型。
+
+
+
+# Android开发
+
+2023/7/14 想用unity开发安卓真的破大防，显示在2021年的两个版本中挣扎，他妈的一个导出的apk有毛病，一个不能导入fbx模型动画，最后还是换成了最新版的2022/3.3f1c1才行的，然后是安装额外的sdk和ndk卧槽，下了这么多没用的东西
+
+## 动态库（so）
+
+1. 首先配置好ndk，只需要ndk就可以了，然后再bashrc中配置好环境变量
+
+2. 编写动态库源文件及CMakeList.txt，这里要注意几点，cmakelist中需要指定**输出为library**
+
+   ```c++
+   #include <stdio.h>
+   extern "C" {
+   void HelloFunc()
+   {
+       printf("Hello World\n");
+   }
+   }
+   extern "C" {
+   int add(int a,int b)
+   {
+           return a+b;
+   }
+   }
+   ```
+
+   ```cmake
+   # CMake最低版本号要求
+   cmake_minimum_required(VERSION 3.6)
+   
+   # 项目信息
+   project (libfun)
+   # CMake最低版本号要求
+   # CMake最低版本号要求
+   SET(ANDROID_ABI armeabi-v7a)
+   SET(ANDROID_ARM_MODE arm)
+   
+   SET(LIBHELLO_SRC libfun.cpp)
+   ADD_LIBRARY(libfun SHARED ${LIBHELLO_SRC})
+   ```
+
+3. 编译，在尝试后，两种方式：
+
+   - cmake-gui：只需要指定**编译工具链的cmake文件即可**，如下面的`android.toolchain.cmake`
+
+     ![image-20230714043731236](src/image-20230714043731236.png)
+
+   - 使用命令行，如下，首先进入build文件夹，
+
+     ```
+     cmake  ..   -DCMAKE_TOOLCHAIN_FILE=$NDK/build/cmake/android.toolchain.cmake     -DANDROID_ABI=armeabi-v7a     -DANDROID_PLATFORM=android-$MINSDKVERSION  -DANDROID_ARM_MODE=arm -DANDROID_PLATFORM=android-23
+     ```
+
+     具体的参数解释为：
+
+     - `ANDROID_ABI`：目标 ABI。如需了解支持的 ABI
+     - `ANDROID_PLATFORM`：指定应用或库所支持的最低 API 级别。此值对应于应用的 `minSdkVersion`
