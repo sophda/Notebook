@@ -665,7 +665,7 @@ public class TreeCtrl : MonoBehaviour
 
 # Android开发
 
-2023/7/14 想用unity开发安卓真的破大防，显示在2021年的两个版本中挣扎，他妈的一个导出的apk有毛病，一个不能导入fbx模型动画，最后还是换成了最新版的2022/3.3f1c1才行的，然后是安装额外的sdk和ndk卧槽，下了这么多没用的东西
+2023/7/14 想用unity开发安卓真的破大防，显示在2021年的两个版本中挣扎，他妈的一个导出的apk有毛病，一个不能导入fbx模型动画，最后还是换成了最新版的2022/3.3f1c1才行的，然后是安装额外的sdk和ndk卧槽，下了这么多没用的东西。不过比起java感觉好点哎~
 
 ## 动态库（so）
 
@@ -720,3 +720,58 @@ public class TreeCtrl : MonoBehaviour
 
      - `ANDROID_ABI`：目标 ABI。如需了解支持的 ABI
      - `ANDROID_PLATFORM`：指定应用或库所支持的最低 API 级别。此值对应于应用的 `minSdkVersion`
+
+4. 在unity中创建文件夹，**层级为Assets->Plugins->Android**，然后将动态库放到这个地方
+
+5. 调用，有几点注意：
+
+   - 调用动态库，需要引用`using System.Runtime.InteropServices;`
+   - 在**每个**动态库函数声明前，需要用`[DllImport("liblibfun")]`
+
+   ```csharp
+   using System.Collections;
+   using System.Collections.Generic;
+   using UnityEngine;
+   using System.Runtime.InteropServices;
+   
+   public class androidso : MonoBehaviour
+   {
+       [DllImport("liblibfun")]
+       public static extern void HelloFunc();
+   
+       [DllImport("liblibfun")]
+       public static extern int add(int a,int b);
+       int  result;
+       // Start is called before the first frame update
+       // GameObject obj;
+       Vector3 pos;
+   
+       void Start()
+       {
+           int x = 1;
+           int y = 1;
+           result = add(x,y);   
+    
+           this.transform.localPosition = new Vector3(0,result,0);
+             Debug.Log("hello");
+           Debug.Log(result);
+       }
+   
+       // Update is called once per frame
+       void Update()
+       {
+           Debug.Log("hello");
+           Debug.Log(result);
+   
+       }
+   }
+   
+   ```
+
+6. 打包，这里没什么说的，就是so库运行不能再电脑上看到效果，必须要打包到手机上。不过可以用debug来看到打印输出：下面不要选这个折叠。
+
+   ![image-20230714050342112](src/image-20230714050342112.png)
+
+   在跳舞的派蒙，可爱，超了~
+
+   ![image-20230714050633809](src/image-20230714050633809.png)
