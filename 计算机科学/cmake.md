@@ -146,3 +146,51 @@ target_link_libraries(子工程名 库文件1 库文件2 ...)     # 注意子工
 
 
 
+
+
+# Example
+
+## 构建和链接静态库和动态库
+
+1. 编写库文件和cmakelist，其中库文件要列出函数，cmake要将源文件编译为库
+
+   ```cmake
+   add_library(message STATIC
+   			fun.cpp fun.h)
+   ```
+
+2. 编写主函数，调用这个库
+
+   ```cmake
+   #可执行文件的目标不需要修改
+   add_executable(${PROJECT_NAME} main.cpp)
+   ```
+
+   然后需要将目标库（编译好的库）**链接**到可执行目标
+
+   ```cmake
+   target_link_libraries(${PROJECT_NAME} message)
+   ```
+
+## 构建自己的库，同时依赖于第三方库
+
+1. 使用工具链构建第三方动态库
+
+2. 在自己的库中，cmakelists
+
+   ```cmake
+   cmake_minimum_required(VERSION 3.0)
+   project(slamAR)
+   
+   include_directories("/home/sophda/src/opencv-3.4.16/build/install/sdk/native/jni/include")
+   
+   link_directories("/home/sophda/src/opencv-3.4.16/build/install/sdk/native/libs/armeabi-v7a")
+   
+   add_library(${PROJECT_NAME} SHARED fun.cpp)
+   target_link_libraries(${PROJECT_NAME} libopencv_core.so libopencv_imgproc.so libopencv_imgcodecs.so)
+   ```
+
+   - include_directories，**编译**的过程中可以找到对应的函数定义
+   - link_directories，**添加库的搜索路径**，供链接时使用。只有添加了这个路径，才能够在**链接**阶段找到对应的库文件，要不然他妈去哪儿找？
+   - add_library，选择库的**类型**，动态or静态，以及源文件
+   - target_link_libraries，将用到的动态库**链接到目标target**，因为使用link_directories指定了库的路径，因此在这个目录下进行寻找。

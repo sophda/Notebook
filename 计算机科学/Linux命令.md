@@ -79,6 +79,14 @@ echo ${NDK}
    readelf -a libhello.so
    ```
 
+   **查看库的平台，x86/arm：**
+
+   ```
+   readelf -h libopencv_photo.so
+   ```
+
+   ![image-20230716045800044](src/image-20230716045800044.png)
+
 2. nm
 
    ```
