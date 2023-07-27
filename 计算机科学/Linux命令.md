@@ -87,6 +87,14 @@ echo ${NDK}
 
    ![image-20230716045800044](src/image-20230716045800044.png)
 
+   **查看库的依赖：**
+
+   ```
+   readelf -a libxxx.so | grep "Shared"
+   ```
+
+   
+
 2. nm
 
    ```

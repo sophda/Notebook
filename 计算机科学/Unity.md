@@ -310,7 +310,16 @@ SceneManger.LoadScene("Myscene",LoadSceneMode.Single)
 
 
 
+# 坐标
 
+## 在物体正前方
+
+```
+Vector3 dir = cam.transform.forward*2.0f + cam.transform.position;
+paimon.transform.position = dir;
+```
+
+cam.transform.forward表示指向cam前方的单位向量，*2后表示距离，然后再加上当前相机cam的世界坐标，即可表示在世界坐标系中cam正前方
 
 # CardBoard VR
 
@@ -775,3 +784,88 @@ public class TreeCtrl : MonoBehaviour
    在跳舞的派蒙，可爱，超了~
 
    ![image-20230714050633809](src/image-20230714050633809.png)
+
+## Android11 强制存储分区
+
+由于Android11强制进行存储分区，所以使用c++ jni获取根目录下的文件需要“获得所有文件读取权”。
+
+1. 首先在Androidmanifest.xml中：
+
+   ```xml
+   <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+       xmlns:tools="http://schemas.android.com/tools"
+       package="com.example.demo">
+   
+       <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+           tools:ignore="ScopedStorage" />
+   
+   </manifest>
+   ```
+
+   指定“权限”为管理外部存储并忽略存储分区“ScopeStorage”。
+
+   **在application中，加入**
+
+   ```
+   <application>
+   	android:requestLegacyExternalStorage="true"
+   	......
+   	......
+   </application>
+   
+   ```
+
+   参考：
+
+   ```xml
+   <?xml version="1.0" encoding="utf-8"?>
+   <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.unity3d.player" xmlns:tools="http://schemas.android.com/tools">
+     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+     <uses-permission android:name="android.permission.INTERNET" />
+     <uses-permission android:name="android.permission.CAMERA" />
+     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" tools:ignore="ScopedStorage" />
+     <uses-feature android:glEsVersion="0x00030001" />
+     <uses-feature android:name="android.hardware.vulkan.version" android:required="false" />
+     <uses-feature android:name="android.hardware.camera" android:required="false" />
+     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+     <uses-feature android:name="android.hardware.camera.front" android:required="false" />
+     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+     <uses-feature android:name="android.hardware.touchscreen.multitouch" android:required="false" />
+     <uses-feature android:name="android.hardware.touchscreen.multitouch.distinct" android:required="false" />
+     <application android:extractNativeLibs="true"
+                  android:requestLegacyExternalStorage="true">
+       <meta-data android:name="unity.splash-mode" android:value="0" />
+       <meta-data android:name="unity.splash-enable" android:value="True" />
+       <meta-data android:name="unity.launch-fullscreen" android:value="True" />
+       <meta-data android:name="unity.allow-resizable-window" android:value="False" />
+       <meta-data android:name="notch.config" android:value="portrait|landscape" />
+       <meta-data android:name="unity.auto-report-fully-drawn" android:value="true" />
+       <activity android:name="com.unity3d.player.UnityPlayerActivity" android:theme="@style/UnityThemeSelector" android:requestLegacyExternalStorage="true" android:screenOrientation="reverseLandscape" android:launchMode="singleTask" android:configChanges="mcc|mnc|locale|touchscreen|keyboard|keyboardHidden|navigation|orientation|screenLayout|uiMode|screenSize|smallestScreenSize|fontScale|layoutDirection|density" android:resizeableActivity="false" android:hardwareAccelerated="false" android:exported="true">
+         <intent-filter>
+           <category android:name="android.intent.category.LAUNCHER" />
+           <action android:name="android.intent.action.MAIN" />
+         </intent-filter>
+         <meta-data android:name="unityplayer.UnityActivity" android:value="true" />
+         <meta-data android:name="notch_support" android:value="true" />
+       </activity>
+     </application>
+   </manifest>
+   ```
+
+   
+
+2. 在unity中导出Android项目，在java文件中的onStart()中修改
+
+   ```java
+   if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R ||
+                   Environment.isExternalStorageManager()) {
+               Toast.makeText(this, "已获得访问所有文件的权限", Toast.LENGTH_SHORT).show();
+           } else {
+               Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+               startActivity(intent);
+           }
+   ```
+
+   ![image-20230728044022180](src/image-20230728044022180.png)
