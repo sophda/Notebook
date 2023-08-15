@@ -64,6 +64,10 @@
 
 点击play按钮后，会进入播放模式，值得注意的是：<u>在播放模式下做的任何修改都不会生效哦~</u>
 
+
+
+
+
 # C#脚本
 
 ## 编写与挂载
@@ -308,7 +312,42 @@ SceneManger.LoadScene("Myscene",LoadSceneMode.Single)
 > 
 > LoadSceneMode.Additive:在原来场景的基础上加载
 
+## 小地图与局部可见
 
+### **小地图制作**
+
+小地图也就是新建一个相机，然后将这个相机看到的渲染到canvas上面。
+
+> 如果是将rendertexture制作成预制体（也就是在asset中新建一个texture，然后设置为camera的targettexture）会导致发布到Android手机上黑屏
+
+需要使用动态创建的方式：
+
+```csharp
+    public Camera minicam;
+    public RawImage rawImage;
+    // Start is called before the first frame update
+    void Start()
+    {
+        RenderTexture rt = new RenderTexture(256,256,24,RenderTextureFormat.ARGB32);
+
+        minicam.targetTexture = rt;
+        //这一部分只需要指定好，不需要更新
+        rawImage.texture = rt;
+
+    }
+```
+
+将camera设置为小地图需要看东西的那个相机，Rawimage设置为需要显示小地图的那个相机。
+
+这个脚本随便挂载在一个地方即可。
+
+### 局部可见
+
+unity，你也不希望小地图里显示的乱七八糟的把~
+
+可以使用层级，为**需要在小地图中显示的物体**设置一个独一无二的`layer`,然后使得主相机看不到这个，小地图相机可以看到。设置Camera中的**Culling Mask**选项
+
+![image-20230811003846408](src/image-20230811003846408.png)
 
 # 坐标
 
@@ -320,6 +359,49 @@ paimon.transform.position = dir;
 ```
 
 cam.transform.forward表示指向cam前方的单位向量，*2后表示距离，然后再加上当前相机cam的世界坐标，即可表示在世界坐标系中cam正前方
+
+## 旋转矩阵与向量
+
+**就一般理性而言**，存在列向量a=(a1,a2,a3)与变换$R_1$，那么从列向量a变换到列向量b=(b1,b2,b3)为：$b=R_{1}a$.即a1,a2,a3在b1等上的分量
+
+一般的向量即**列向量**，对应**左乘**一个旋转矩阵进行变换。
+
+那么也存在$b^T=a^TR_1^T$，也就是同上，反过来的分量。总而言之，一般旋转矩阵变换一个列向量。
+
+## 旋转矩阵转四元数
+
+```c#
+Matrix4x4 rot = new Matrix4x4();
+rot.SetTRS(new Vector3(0,0,0),q,new Vector3(1,1,1));
+		
+Vector4 vy = rot.GetColumn(1);
+Vector4 vz = rot.GetColumn(2);
+		
+Quaternion newQ = Quaternion.LookRotation(new Vector3(vz.x,vz.y,vz.z),new Vector3(vy.x,vy.y,vy.z));
+```
+
+我测你，原来有这种用法？拿到一个旋转矩阵rot，然后取他的1、2列构成vec4，使用`Quaternion.LookRotation`就可以把这个旋转矩阵转化为四元数了，我还好奇这他妈的是什么奇怪的变换。。
+
+**注意！** `static Quaternion LookRotation(Vector3 forward,Vector3 upwards);`这个函数的1、2个参数含义不同，但是这只是改变了模型的方向，尽管两个参数的位置不同，他们都是可以确定一个坐标系的，进而实现完整的旋转。旋转的变化也会同步，只是模型的指向不同了而已。
+
+## 与ORBSLAM 2
+
+ORBSLAM2是给出了相机->世界坐标系的变换，而且是右手系。unity中是左手坐标系。
+
+如何对齐呢，把orbslam看成是imu，最终的效果保持：手机怎么动，unity中的相机怎么动，管他的orbslam什么坐标系呢？！
+
+至于左手系与右手系的关系，可以把旋转矩阵转换为欧拉角，然后对应到unity中，一个轴一个轴的对应。
+
+平移的话，需要先获得orbslam中世界坐标系中的相机位置，参考《视觉SLAM十四讲》中的观点，对于$T_{cw}$需要做一下变换
+$$
+P_{cam}=-R^{T}*t \\
+R_{cam}=-R^T
+$$
+具体的还要根据unity中的坐标和旋转方向进行细调。（诸如：欧拉角取反等）
+
+**还有一件事！**如果在unity中同步了相机的位姿和位移，但是相机移动起来感觉模型不是特别同步？这是因为相机的视野太广了，导致绕z轴旋转可以跟踪的很好，但是绕x、y旋转或平移就很出戏（相机视角太广，即使相机是的的确确移动了的，但是模型还是处在相机的视野中，看起来跟没动一样，导致体验不好）。所以**调小camera->field of view**
+
+![image-20230816014702980](src/image-20230816014702980.png)
 
 # CardBoard VR
 

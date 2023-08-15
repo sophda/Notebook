@@ -133,3 +133,17 @@ Listnew = np.array(list)
 ![](src/2023-02-14-03-24-58-image.png)
 
 ![](src/2023-02-14-03-25-09-image.png)
+
+## cv::flip
+
+小于0（例如-1）代表左右上下颠倒；0代表上下颠倒；大于0（例如1）代表左右颠倒。
+
+```
+using namespace cv;
+flip(src,dst,1);
+```
+
+![image-20230804093318423](src/image-20230804093318423.png)
+
+## cv::Mat::t()就是求转置
+

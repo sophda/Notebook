@@ -1,8 +1,8 @@
 # C++ (二)
 
-> 来自b站视频
+> 来自b站视频，以及书，博客。尽量偏系统
 
-## 0.一些名词
+# 0.一些名词
 
 内存：memory
 
@@ -16,7 +16,7 @@
 
 模板：template
 
-## 1.link
+# 1.link
 
 程序生成需要“编译”和“链接”，编译是生成二进制机器码，而链接则是将编译后的obj文件链接起来称为可执行的。
 
@@ -124,7 +124,7 @@ cout <<"" <<endl;
 
 
 
-## 2.head files
+# 2.head files
 
 头文件保护符：
 
@@ -149,7 +149,7 @@ cout <<"" <<endl;
 //为了区别c和cpp 的标准库
 ```
 
-## 3.指针
+# 3.指针
 
 > 指针是一个整数，一个数字，存储着一个内存地址
 
@@ -161,7 +161,7 @@ cout <<"" <<endl;
 >
 > 这样是错的，因为ptr指向了一个内存地址，但是void形的，所以编译器不知道要向这个内存地址处写入多少字节的数据
 
-## 4.reference
+# 4.reference
 
 ```
 int main()
@@ -175,7 +175,7 @@ int main()
 
 
 
-## 5.classes
+# 5.classes
 
 > 类与结构体的区别：
 >
@@ -200,11 +200,11 @@ int main()
 
    **这里move函数传入了类Player的对象的引用**，相当于传入了一个实例化的player的别名（reference）
 
-  ## 6.static in c++
+# 6.static in c++
 
 使用static来指定变量，那么这个变量在link的时候只对这个编译单元（obj）里的东西可见
 
-## 7.类中的继承
+# 7.类中的继承
 
 ```cpp
 class Entity
@@ -228,9 +228,9 @@ int main()
 // player对象继承了父类entity的所有内容
 ```
 
-## 8.虚函数与内存模型
+# 8.虚函数与内存模型
 
-### 虚函数
+## 虚函数
 
 1. 例子
 
@@ -357,7 +357,7 @@ class Entity
 public:
 	virtual std::string GetName()=0;
 }
-// 令这个函数为零，则必须在子类里定义
+// 令这个函数为零，则必须在子类里定义，否则子类将无法被实例化
 //
 Entity *e = new Entity();
 // 也是错误的，因为GetName么有定义
@@ -536,7 +536,7 @@ Entity *e = new Entity();
    - 有个子类对基类进行了继承，则需要对虚函数进行定义，这时会给子类也分配一个**虚函数表**，该虚函数表指针指向该子类的函数定义，本质上是回调。
    - 对子类强转为基类指针，虚函数表并不会被修改，此时会出现：调用基类的函数，会出现不同情况
 
-### 内存模型
+## 内存模型
 
 > ref:[C++语言中的类在内存中的分布是怎样的？也是内存对齐的吗？对象的虚表指针存放在哪里？C++中类的内存模型，在内存中是如何存储的？虚函数是如何存储的 - 刘冲的博客 (popkx.com)](https://blog.popkx.com/what-is-the-memory-model-of-class-in-c-where-is-the-virtual-pointer/)
 
@@ -750,7 +750,7 @@ int main() {
 
 上面这一种情况，因为基类包含virtual函数，则会有个虚函数表指针（大小为指针大小）。子类是继承的，所以也有。在执行`Entity* entity = dynamic_cast<Entity* >(p);`时，基类的虚函数表指针是在内存中的，属于类的成员变量，那么基类的虚函数表指针也会被赋值为子类的虚函数表指针，这时，就会执行子类的函数。进而输出“”
 
-## 9.初始化 ：
+# 9.初始化 ：
 
 ```cpp
 class example
@@ -790,7 +790,7 @@ public:
 }
 ```
 
-## 10. new 关键词
+# 10. new 关键词
 
 > new 关键词返回指针！！！
 
@@ -814,7 +814,7 @@ int main()
 
 
 
-## 11.隐式转换
+# 11.隐式转换
 
 
 
@@ -863,7 +863,7 @@ int main()
 
 
 
-## 12.堆和栈(包含隐式转换的解释)
+# 12.堆和栈(包含隐式转换的解释)
 
 1. 栈的作用域：{}，所以一旦离开了栈的作用域，作用域内的内容会消失
 
@@ -910,7 +910,7 @@ int main()
 
 
 
-## 13.智能指针
+# 13.智能指针
 
 > 智能指针实际上是对传统指针的包装，当创建智能指针时，会调用new并分配内存。在不适用时会自动删除。
 >
@@ -982,4 +982,160 @@ int main()
 	} //执行完后，e0被销毁，shared_ptr应用数为0，指针对象执行析构函数
 }
 ```
+
+
+
+# 14.模板
+
+模板是让编译器为你写代码。避免手动重载
+
+## 函数模板
+
+只有在调用模板的时候，模板才会被创建。如果模板函数内存在错误，是可以正常编译的。
+
+```c++
+template<typename T>
+void Print(T value)
+{
+	std::cout<< value <<std::endl;
+}
+// 下面这种情况是隐式地调用了模板,可以推断是什么类型的
+Print("hello");
+Print(5.5f);
+//下面则是显式地调用
+Print<int>(5);
+```
+
+
+
+## 类模板
+
+```c++
+template<int N>
+class Array
+{
+private :
+	int array[N];
+public :
+	int GetSize() const {return N;}
+}
+void main()
+{
+	Array<5> array;
+	std<<cout<<array.GetSize();
+}
+//输出为5
+```
+
+```C++
+template<typename T,int N>
+class Array
+{
+private :
+	T array[N];
+public :
+	int GetSize() const {return N;}
+}
+void main()
+{
+	Array<std::string,5> array;
+	std<<cout<<array.GetSize();
+}
+//输出为5
+```
+
+
+
+# 15.auto关键词
+
+# 16.线程
+
+## 1.定义
+
+在一个程序中，这些独立运行的程序片段叫作“线程”（Thread）
+
+- 一个程序有且只有一个进程，按时可以有多个线程
+- 不同的进程有不同的地址空间，互不相关。但是不同的线程有共同进程的地址空间
+- 在c中有pthread的库进行多线程编程。但是在c++ 11中出现了std::thread的东西，所以在使用了这个threa的有的库的编译选项不用选择ptread
+
+**基础使用：**
+
+```c++
+// Compiler: MSVC 19.29.30038.1
+// C++ Standard: C++17
+#include <iostream>
+#include <thread>
+using namespace std;
+void doit() { cout << "World!" << endl; }
+int main() {
+	// 这里的线程a使用了 C++11标准新增的lambda函数
+	// 有关lambda的语法，请参考我之前的一篇博客
+	// https://blog.csdn.net/sjc_0910/article/details/109230162
+	thread a([]{
+		cout << "Hello, " << flush;
+	}), b(doit);
+	a.join();
+	b.join();
+	return 0;
+}
+
+```
+
+**注意事项：**
+
+- 线程是thread对象被定义的时候就会执行，而不是join函数才执行的，调用join函数只是阻塞等待线程结束并回收资源
+- 分离的线程（执行过detach的线程）会在调用它的线程结束或自己结束时释放资源
+- 线程会在函数运行完毕后自动释放
+
+## 2.std::atomic和std::mutex
+
+多个线程进行时，如果操作同一个变量，那么肯定会出错，所以出现了这两个东西。
+
+**std::mutex**
+
+```c++
+// Compiler: MSVC 19.29.30038.1
+// C++ Standard: C++17
+#include <iostream>
+#include <thread>
+#include <mutex>
+using namespace std;
+int n = 0;
+mutex mtx;
+void count10000() {
+	for (int i = 1; i <= 10000; i++) {
+		mtx.lock();
+		n++;
+		mtx.unlock();
+	}
+}
+int main() {
+	thread th[100];
+	for (thread &x : th)
+		x = thread(count10000);
+	for (thread &x : th)
+		x.join();
+	cout << n << endl;
+	return 0;
+}
+
+```
+
+如上，100个线程同时操作同一个全局变量n，在每个线程中会将mutex锁住，其他线程都不能执行，所以只有一个线程在执行n的加法。
+
+mutex实例化的对象成员函数：
+
+|      函数       |                             作用                             |
+| :-------------: | :----------------------------------------------------------: |
+|   void lock()   | 将mutex上锁。如果mutex已经被其它线程上锁，那么会阻塞，直到解锁；如果mutex已经被同一个线程锁住，那么会产生死锁。 |
+|  void unlock()  | 解锁mutex，释放其所有权。<br/>如果有线程因为调用lock()不能上锁而被阻塞，则调用此函数会将mutex的主动权随机交给其中一个线程；<br/>如果mutex不是被此线程上锁，那么会引发未定义的异常。 |
+| bool try_lock() | 尝试将mutex上锁。<br/>如果mutex未被上锁，则将其上锁并返回true；<br/>如果mutex已被锁则返回false。 |
+
+---
+
+**std::atomic**
+
+
+
+# 17.多维数组
 
