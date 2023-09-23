@@ -66,3 +66,10 @@ wsl --shutdown
 ```
 wsl --update
 ```
+
+## 安装文件管理器
+
+```
+sudo apt install nautilus -y
+```
+

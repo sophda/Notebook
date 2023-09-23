@@ -398,6 +398,11 @@ ORBSLAM2是给出了相机->世界坐标系的变换，而且是右手系。unit
 
 平移的话，需要先获得orbslam中世界坐标系中的相机位置，参考《视觉SLAM十四讲》中的观点，对于$T_{cw}$需要做一下变换
 $$
+T_{cw}=\begin {bmatrix}
+R & t \\
+0 & 1
+\end {bmatrix}
+\\
 P_{cam}=-R^{T}*t \\
 R_{cam}=-R^T
 $$

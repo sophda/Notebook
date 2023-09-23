@@ -1,4 +1,4 @@
-# Linux命令
+# Linux
 
 ## 解压缩相关
 
@@ -101,4 +101,32 @@ echo ${NDK}
    nm libhello.so
    ```
 
+3. 查看动态库函数
+
+   ```
+   nm -D lib***.so
+   ```
+
+
+4. 查看动态库是32为还是64位
+
+   动态库：
+
+   ```
+   file xxx.so
+   ```
+
+   静态库
+
+   ```
+   objdump -a xxx.a
    
+   
+   ```
+
+   
+
+# sh脚本
+
+
+
