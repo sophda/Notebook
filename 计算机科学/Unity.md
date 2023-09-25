@@ -809,7 +809,7 @@ public class TreeCtrl : MonoBehaviour
 
 1. 首先配置好ndk，只需要ndk就可以了，然后再bashrc中配置好环境变量
 
-2. 编写动态库源文件及CMakeList.txt，这里要注意几点，cmakelist中需要指定**输出为library**
+2. 编写动态库源文件及CMakeList.txt，这里要注意几点，cmakelist中需要指定**输出为library**.**同时C要大写**
 
    ```c++
    #include <stdio.h>
