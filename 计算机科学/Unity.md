@@ -998,3 +998,100 @@ public class TreeCtrl : MonoBehaviour
    ```
 
    ![image-20230728044022180](src/image-20230728044022180.png)
+
+
+
+# AR ORBSLAM3-Based
+
+## 动态库编译移植
+
+和orbslam2移植其实没有太大的区别，唯一要注意的是移植boost依赖库相关的部分，尤其是archive中的，这一部分应该是刚需动态库移植的，但是并没有成功。因此保留serialization并且去除archive
+
+## 李群李代数
+
+> 旋转矩阵自身带有约束，行列式为1.因为这个约束，当作为优化变量时会变得困难。
+
+三维矩阵构成了特殊正交群SO(3),变换矩阵构成了特殊欧式群SE(3)
+$$
+SO(3)=R\in R^{3*3}|RR^T=I,det(R)=1
+$$
+
+$$
+SE(3)=\{ R=
+\begin {bmatrix}
+R & t \\
+0^T & 1
+
+\end{bmatrix}
+\in
+R^{4*4} |
+R \in SO(3),t \in R^3
+\}
+$$
+
+对于两个旋转矩阵R1和R2，两个变换矩阵T1 T2，那么R1+R2不是SO(3);
+
+T1+T2也不是SE(3)
+
+但是乘法是封闭的：
+
+![image-20230930135735899](src/image-20230930135735899.png)
+
+**群**
+
+群是一种集合+一种运算的代数结构，集合记作A，运算记作 ·
+
+那么群可以记作G=（A，·）  群要求运算满足：
+
+![image-20230930135913683](src/image-20230930135913683.png)
+
+![image-20230930235300666](src/image-20230930235300666.png)
+
+![image-20230930235510612](src/image-20230930235510612.png)
+
+## Sophus库
+
+> Sophus库支持SO(3)与SE(3)
+
+可以由旋转矩阵进行构造SO:
+
+```
+Matrx3d R = AngelAxisd(PI/2,Vector3d(0,0,1).toRotationMatrix);
+Sophus::SO3d SO3_R(R);
+
+Quaterniond q(R);
+Sophus::SO3d SO3_q(q);
+```
+
+对于SE(3):
+
+```
+Vector3d t(1,0,0); //沿x轴平移1
+Sophus::SE3d SE3_Rt(R,t); //从R，t构造SE(3)
+```
+
+**SE(3)数据转Mat**
+
+```
+Sophus::SE3 se3=...;
+
+// 将旋转矩阵转mat类型
+cv::Mat R_cv(3,3,CV_32FC1,se3.rotationMatrix().data());
+
+// 将4*4变换矩阵中的3*3旋转矩阵提取
+cv::Mat R_cv(3,3,CV_32FC1,se3.matrix().block(0,0,3,3).data());
+
+// 获取平移矩阵
+cv::Mat t_cv(3,1,CV32FC1,se3.translation().data());
+```
+
+综上：
+
+- rotationMatrix可以获取SE(3)中的旋转矩阵
+- Matrix可以获取其中的平移矩阵
+- translation可以获取平移矩阵
+
+
+
+## unity
+
