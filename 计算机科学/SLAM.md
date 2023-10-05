@@ -339,7 +339,7 @@ rosdep update
 
 
 
-# OrbSlam3
+# OrbSlam3 论文
 
 ## 主要创新点
 
@@ -363,4 +363,235 @@ rosdep update
 
 
 ## Camera Model
+
+假定所有系统组件中均为针孔相机模型（pinhole），目标是通过提取与相机模型相关的所有属性和函数（投影和非投影矩阵、雅各比矩阵等）来从slam pipeline中抽象出相机模型。
+
+**重定位**
+
+**非矫正立体slam**
+
+
+
+## Visual-Inertial SLAM
+
+> 建立在orbslam-vi提供的快速准确的imu初始化技术
+
+**基础**  在纯视觉slam中，估计状态仅包含当前相机姿态，但在视觉-惯性slam中，需要计算额外变量。这些就是世界坐标系中的身体姿态（body pose）。
+$$
+T_i=[R_i,p_i] \in SE(3) 
+$$
+和速度$v_i$ ,以及陀螺仪和加速度计偏差$b^g_i$ 、$b_i^a$ ,其被假设为根据布朗运动演变。导致状态向量：
+$$
+S_i=\{T_i,v_i,b_i^g,b_i^a \}
+$$
+对于视觉-惯性slam，根据（Visual-inertial-aided navigation for high-dynamic motion in built environments without initial conditions,” IEEE
+Transactions on Robotics）这篇文章里的理论，对连续视觉帧i和i+1之间预积分IMU，并流型化上述公式。**此时得到了预积分的旋转、速度和位置测量值**，表示为$\Delta R_{i,i+1}$,$\Delta v_{i,i+1}$以及$\Delta p_{i,i+1}$以及整个测量向量的协方差矩阵$\sum _{I_{i,i+1}}$
+
+> 协方差矩阵可以视作两部分组成，分别是方差和协方差，**即方差构成了对角线上的元素，协方差构成了非对角线上的元素**
+>
+> - 方差用来衡量单个随机变量的离散程度
+>
+> - 协方差定义为
+>   $$
+>   \sigma (x,y)=\frac{1}{n-1}\sum_{i=1}^{n}(x_i-\overline x)(y_i-\overline y)
+>   $$
+>   
+
+   
+
+
+
+# orbslam3 源码
+
+## system.h /cc
+
+**system构造函数**
+
+**Sophus::SE3f TrackStereo**
+
+**Sophus::SE3f TrackRGBD**
+
+**Sophus::SE3f TrackMonocular**
+
+**void ActivateLocalizationMode();**
+
+**void DeactivateLocalizationMode();**
+
+**bool MapChanged();**
+
+**void Reset();**
+
+**void Shutdown();**
+
+**bool isShutDown();**
+
+**void SaveTrajectoryTUM(const string &filename);**
+
+**void SaveKeyFrameTrajectoryTUM(const string &filename);**
+
+**void SaveTrajectoryEuRoC(const string &filename);**
+
+**void SaveKeyFrameTrajectoryEuRoC(const string &filename);**
+
+**void SaveTrajectoryEuRoC(const string &filename, Map* pMap);**
+
+**void SaveKeyFrameTrajectoryEuRoC(const string &filename, Map* pMap);**
+
+**void SaveDebugData(const int &iniIdx);**
+
+**void SaveTrajectoryKITTI(const string &filename);**
+
+**int GetTrackingState();**
+
+**std::vector<MapPoint*> GetTrackedMapPoints();**
+
+**std::vector<cv::KeyPoint> GetTrackedKeyPointsUn();**
+
+---
+
+private：
+
+**void SaveAtlas(int type);**
+
+**bool LoadAtlas(int type);**
+
+**string CalculateCheckSum(string filename, int type);**
+
+**eSensor mSensor;**
+
+**ORBVocabulary* mpVocabulary;**
+
+**KeyFrameDatabase* mpKeyFrameDatabase;**
+
+**Atlas* mpAtlas;**
+
+**Tracking* mpTracker;**
+
+**LocalMapping* mpLocalMapper;**
+
+**LoopClosing* mpLoopCloser;**
+
+**std::thread* mptLocalMapping;**
+
+**std::thread* mptLoopClosing;**
+
+**std::mutex mMutexReset;**
+
+**bool mbReset;**
+
+**bool mbResetActiveMap;**
+
+**std::mutex mMutexMode;**
+
+**bool mbActivateLocalizationMode;**
+
+**bool mbDeactivateLocalizationMode;**
+
+**bool mbShutDown;**
+
+**int mTrackingState;**
+
+**std::vector<MapPoint*> mTrackedMapPoints;**
+
+**std::vector<cv::KeyPoint> mTrackedKeyPointsUn;**
+
+**std::mutex mMutexState;**
+
+**string mStrLoadAtlasFromFile;**
+
+**string mStrSaveAtlasToFile;**
+
+**string mStrVocabularyFilePath;**
+
+**Settings* settings_;**
+
+
+
+
+
+## Altas
+
+**template<class Archive>  void serialize(Archive &ar, const unsigned int version)**
+
+**Atlas();**
+
+**Atlas(int initKFid);**
+
+**~Atlas();**
+
+**void CreateNewMap();**
+
+**void ChangeMap(Map* pMap);**
+
+**unsigned long int GetLastInitKFid();**
+
+**void SetViewer(Viewer* pViewer);**
+
+**void AddKeyFrame(KeyFrame* pKF);**
+
+**void AddMapPoint(MapPoint* pMP);**
+
+**GeometricCamera* AddCamera(GeometricCamera* pCam);**
+
+**std::vector<GeometricCamera*> GetAllCameras();**
+
+**void SetReferenceMapPoints(const std::vector<MapPoint*> &vpMPs);**
+
+**void InformNewBigChange();**
+
+**int GetLastBigChangeIdx();**
+
+**long unsigned int MapPointsInMap();**
+
+**long unsigned KeyFramesInMap();**
+
+**std::vector<KeyFrame*> GetAllKeyFrames();**
+
+**std::vector<MapPoint*> GetAllMapPoints();**
+
+**std::vector<MapPoint*> GetReferenceMapPoints();**
+
+**vector<Map*> GetAllMaps();**
+
+**int CountMaps();**
+
+**void clearMap();**
+
+**void clearAtlas();**
+
+**Map* GetCurrentMap();**
+
+**void SetMapBad(Map* pMap);**
+
+**void RemoveBadMaps();**
+
+**bool isInertial();**
+
+**void SetInertialSensor();**
+
+**void SetImuInitialized();**
+
+**bool isImuInitialized();**
+
+**void PreSave();**
+
+**void PostLoad();**
+
+**map<long unsigned int, KeyFrame*> GetAtlasKeyframes();**
+
+**void SetKeyFrameDababase(KeyFrameDatabase* pKFDB);**
+
+**KeyFrameDatabase* GetKeyFrameDatabase();**
+
+**void SetORBVocabulary(ORBVocabulary* pORBVoc);**
+
+**ORBVocabulary* GetORBVocabulary();**
+
+**long unsigned int GetNumLivedKF();**
+
+**long unsigned int GetNumLivedMP();**
+
+---
+
+protected
 
