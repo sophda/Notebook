@@ -1,4 +1,4 @@
-# C++ (二)
+# C++ 
 
 > 来自b站视频，以及书，博客。尽量偏系统
 
@@ -1843,7 +1843,7 @@ int main() {
 - 分离的线程（执行过detach的线程）会在调用它的线程结束或自己结束时释放资源
 - 线程会在函数运行完毕后自动释放
 
-## 2.std::atomic和std::mutex
+## std::atomic和std::mutex
 
 多个线程进行时，如果操作同一个变量，那么肯定会出错，所以出现了这两个东西。
 
@@ -2005,3 +2005,54 @@ for (auto iter : test)
     std::cout << iter.second << std::endl;
 }
 ```
+
+## 关联容器
+
+**map**
+
+按关键词有序保存元素，使用“键--值“对
+
+***
+
+**set**
+
+关键字即值，即只保存关键词的容器
+
+插入删除查找的复杂度为对数级，即使用红黑树算法实现，**内部数据是有序的**
+
+可以进行：
+
+1. 去重操作
+2. 排序操作
+
+使用方法：
+
+```
+set<int> s;
+s.insert(x); // 插入元素
+s.erase(x);  //删除元素，有就删除，无则不管
+s.size(x);
+s.find(x);  //查找，返回迭代器
+s.count(x);
+s.empty();看看是否为空
+```
+
+```
+#include <iostream>
+#include <set>
+using namespace std;
+int main()
+{
+	set<int> s;
+	
+}
+```
+
+
+
+***
+
+**multimap**
+
+关键字可以重复的map
+
