@@ -1,4 +1,4 @@
-# C++ 
+
 
 > 来自b站视频，以及书，博客。尽量偏系统
 
@@ -60,6 +60,35 @@ int main ()
 ## malloc
 
 返回的是void类型，需要进行类型转换
+
+
+
+# 文件
+
+## 文件写入
+
+```c++
+#include <fstream>
+int main() {
+
+    ofstream out;
+    out.open("./text.txt");
+    out << "123" <<  " "<< "hello" <<endl;
+    out.close();
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
