@@ -1091,6 +1091,115 @@ cv::Mat t_cv(3,1,CV32FC1,se3.translation().data());
 - Matrix可以获取其中的平移矩阵
 - translation可以获取平移矩阵
 
+## 点云地图保存
+
+非常好的一点在于，orbslam3的作者非常贴心地给这个系统加上了multi map，也就是我们可以获取当前的local map，做一些拟合相关的任务，而不用借助恶心的全局地图，那样子会很大的对吧~
+
+所以捏，为了可爱的小草神能够站在桌面上，需要获得桌子的local map，需要将slam中的map引出。
+
+```c++
+// 在system.cc中加入函数，在相应的头文件中也要加入定义
+void System::GetLocalMap(vector<MapPoint*> & localMap)
+{
+    // atlas = mpAtlas;
+    Map *activeMap = mpAtlas->GetCurrentMap();
+    if (!activeMap)
+        return;
+    const vector<MapPoint*> vpmaps = activeMap->GetAllMapPoints();
+    localMap = vpmaps;
+}
+
+```
+
+同时，在接口文件fun.cpp中，加入：（这个extern 的function并不是拟合平面用的，而是用来保存点云地图用的哈~）在skd呆的，说话都要崩洋文了是吧？😓
+
+```c++
+extern "C"
+{
+    void GetLocalMap()
+    {
+        ofstream out ;
+        out.open("/storage/emulated/0/4DAR/cloud.txt");
+        out << "# .PCD v0.7 - Point Cloud Data file format \n"
+            << "VERSION 0.7\n"
+            << "FIELDS x y z\n"
+            << "SIZE 4 4 4 \n"
+            << "TYPE F F F \n"
+            << "COUNT 1 1 1\n"<<endl;
+        // Atlas 这个类实在orbslam3作用域下声明的，所以要带上作用域或使用namespace
+        // ORB_SLAM3::Atlas *atlas;
+        vector<ORB_SLAM3::MapPoint*> vpmaps ;
+        SLAM.GetLocalMap(vpmaps);
+
+        
+        vector<Point3f> mapPoints;
+
+        out <<"WIDTH"<< " "<<vpmaps.size()<<"\n"
+            <<"HEIGHT 1 \n" 
+            << "VIEWPOINT 0 0 0 1 0 0 0\n"
+            << "POINTS" << " "<< vpmaps.size() <<"\n"
+            << "DATA ascii \n"
+            << endl;
+
+        for(size_t i = 0,iend = vpmaps.size();i<iend;i++)
+        {
+            if (vpmaps[i]->isBad())
+                continue;
+            Eigen::Matrix<float ,3,1> pos = vpmaps[i]->GetWorldPos();
+            Point3f tmpPoint;
+            tmpPoint.x = pos(0);
+            tmpPoint.y = pos(1);
+            tmpPoint.z = pos(2);
+            mapPoints.push_back(tmpPoint);
+
+            out<<pos(0)<< " " <<pos(1)<< " " <<pos(2)<<endl;
+            
+        }
+        out.close();
+    }
+}
+```
+
+然后使用pcl读一下这个保存的点云文件：（只需要把后缀名改为pcd就可以了。。
+
+```c++
+#include <iostream>
+#include <pcl/point_types.h>
+#include <pcl/io/pcd_io.h>
+#include <pcl/kdtree/kdtree_flann.h>
+#include <pcl/common/common.h>
+#include <pcl/io/vtk_lib_io.h>
+#include <pcl/visualization/cloud_viewer.h>
+#include <pcl/visualization/pcl_visualizer.h>
+int main() {
+//    std::cout << "Hello, World!" << std::endl;
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::io::loadPCDFile("./cloud.pcd",*cloud);
+
+    boost::shared_ptr< pcl::visualization::PCLVisualizer > viewer(new pcl::visualization::PCLVisualizer("Ransac"));
+    viewer->addCoordinateSystem(1.0);
+    viewer->initCameraParameters();
+    viewer->setBackgroundColor(0, 0, 0);
+
+    viewer->addPointCloud(cloud, "cloud");
+    viewer->spin();
+
+    return 0;
+}
+
+```
+
+
+
+![image-20231007234222525](src/image-20231007234222525.png)
+
+![image-20231007235358193](src/image-20231007235358193.png)
+
+这个可以观察到，桌子的大体轮廓，那么这些点是从orbslam3的getposition得到的，可以推测slam系统的坐标轴，光轴方向是相机方向，手机朝下的方向是y轴的正方向，手机朝右的方向是x轴正方向。
+
+
+
 
 
 ## unity
