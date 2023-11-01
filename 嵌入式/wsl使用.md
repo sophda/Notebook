@@ -63,6 +63,25 @@ wsl --shutdown
 
 # 如果安装了wslg(wsl gui)，则上面就不用折腾了~~~~笑
 
+## 需要开启虚拟化、hyper-v等
+win 11没有hyper v：
+新建hyper.cmd
+```
+pushd "%~dp0"
+dir /b %SystemRoot%\servicing\Packages\*Hyper-V*.mum >hyper-v.txt
+for /f %%i in ('findstr /i . hyper-v.txt 2^>nul') do dism /online /norestart /add-package:"%SystemRoot%\servicing\Packages\%%i"
+del hyper-v.txt
+Dism /online /enable-feature /featurename:Microsoft-Hyper-V-All /LimitAccess /ALL
+```
+运行一下
+## 安装wsl
+1.商店安装Ubuntu
+2.设置默认版本
+```
+wsl --set-default-version 2
+```
+3.更新，以使用wslg
+
 ```
 wsl --update
 ```
