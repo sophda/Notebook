@@ -1,6 +1,4 @@
-# 超声波在生物医学中的应用
-
-> 来源：foundation of biomedical ultrasound
+# 超声波在生物医学中的应用来源：foundation of biomedical ultrasound
 
 index:
 

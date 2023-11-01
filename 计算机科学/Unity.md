@@ -1204,3 +1204,610 @@ int main() {
 
 ## unity
 
+slam3.cs
+
+```
+using System.Collections;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using UnityEngine;
+
+using UnityEngine.UI;
+using System;
+using System.IO;
+using System.Linq;
+using System.Text;
+using UnityEngine.SceneManagement;
+using TMPro;
+public class slam : MonoBehaviour
+{
+
+
+
+    // flag
+    bool bool_startSlam = false;
+    bool setModel=false;
+    
+
+    // TEMP data
+    byte[] imgData;
+    Color32[] data;
+    
+	float[] transform1 = new float[3];
+	float[] rotation1 = new float[9];
+    public int z;
+
+
+
+    // game object
+    // text
+    public GameObject textMesh;
+    public TextMeshProUGUI ui_text;
+
+
+    // camera
+    public Camera maincam;  
+
+    // object
+    public GameObject model;
+
+    // BUTTON
+    public Button btn_savepic;
+    public Button btn_startSlam;
+    public Button btn_setmodel;
+    public Button btn_saveCloud;
+
+    // raw image
+    public RawImage rawImage;
+
+    // WEBCAM
+    public WebCamTexture webCamTexture = null;
+
+
+
+
+    // dynamic libraries
+    [DllImport("libslamAR")]
+    private static extern int sum(int x,int y);
+    [DllImport("libslamAR")]
+
+    private static extern void ProcessImage(byte[] ImageData, float[] T, float[] R, int width,int height);
+    
+    [DllImport("libslamAR")]
+    private static extern void SaveImage();
+    [DllImport ("libslamAR")]
+    private static extern void GetLocalMap();
+
+ 
+
+    // Start is called before the first frame update
+    void Start()
+    {
+        btn_startSlam.onClick.AddListener(()=>{StartCam();});
+        btn_savepic.onClick.AddListener(()=>{Save();});
+        btn_setmodel.onClick.AddListener(()=>{SetModel();});
+        btn_saveCloud.onClick.AddListener(()=>{GetLocalMap();});
+
+
+        ui_text = textMesh.GetComponent<TextMeshProUGUI>();
+        
+        // int x = 10;
+        // int y = 20;
+        // z  = sum(x,y);
+
+    }
+
+    public void SetModel()
+    {
+        setModel = true;
+
+    }
+
+    public void StartCam()
+    {
+        // clicked=true;isProcess=true;
+        StartCoroutine(Call());
+    }
+    public IEnumerator Call()
+    {
+
+        // 请求权限
+        yield return Application.RequestUserAuthorization(UserAuthorization.WebCam);
+        if (!Application.HasUserAuthorization(UserAuthorization.WebCam))
+        {
+            yield return Application.RequestUserAuthorization(UserAuthorization.WebCam);//授权
+        };
+ 
+        if (Application.HasUserAuthorization(UserAuthorization.WebCam) && WebCamTexture.devices.Length > 0 )
+        {
+            Debug.Log(WebCamTexture.devices[0].name);
+            
+            // 创建相机贴图
+            // webCamTexture = new WebCamTexture(WebCamTexture.devices[0].name, Screen.width, Screen.height, 60);
+            webCamTexture = new WebCamTexture(WebCamTexture.devices[0].name,640,480,60);
+            
+            // webCamTexture.videoVerticallyMirrored  = true;
+            rawImage.texture = webCamTexture;
+            webCamTexture.Play();
+
+            imgData = new byte[webCamTexture.height * webCamTexture.width * 4];
+            data = new Color32[webCamTexture.height * webCamTexture.width];
+
+            bool_startSlam = true;
+
+            // Debug.Log("init");
+                        // Debug.Log("cam length "+WebCamTexture.devices.Length+" "+WebCamTexture.devices[0].name+" "+webCamTexture.width+" "+webCamTexture.height);
+
+            // clicked = true;
+
+
+        }
+    }
+    private void OnApplicationPause(bool pause)
+    {
+        // 应用暂停的时候暂停camera，继续的时候继续使用
+        if (webCamTexture !=null)
+        {
+            if (pause)
+            {
+                webCamTexture.Pause();
+            }
+            else
+            {
+                webCamTexture.Play();
+            }
+        }
+        
+    }
+    private void OnDestroy()
+    {
+        if (webCamTexture != null)
+        {
+            webCamTexture.Stop();
+        }
+    }
+    public void Color32ArrayToByteArray(Color32[] colors)
+	{
+		GCHandle handle = default(GCHandle);
+		handle = GCHandle.Alloc(colors, GCHandleType.Pinned);
+		IntPtr ptr = handle.AddrOfPinnedObject();
+		Marshal.Copy(ptr, imgData, 0, webCamTexture.height * webCamTexture.width*4);
+
+		if (handle != default(GCHandle))
+			handle.Free();
+	}
+    public void Save()
+    {
+        SaveImage();
+    }
+
+
+
+    // Update is called once per frame
+    void Update()
+    {
+
+        
+        if (bool_startSlam)
+        {
+            // imgData = new byte[webCamTexture.height * webCamTexture.width * 4];
+            // data = new Color32[webCamTexture.height * webCamTexture.width];
+            Debug.Log("run");
+            webCamTexture.GetPixels32(data);
+            Color32ArrayToByteArray(data);
+            // 得到数据
+            ProcessImage(imgData, transform1, rotation1, webCamTexture.width,webCamTexture.height);
+
+            // c++端的rotation是一列一列传过来的，
+            Matrix4x4 ygx = Matrix4x4.identity;
+			Vector4 y1 = new Vector4 (rotation1 [0], rotation1 [1], rotation1 [2], 0);
+			Vector4 y2 = new Vector4 (rotation1 [3], rotation1 [4], rotation1 [5], 0);
+			Vector4 y3 = new Vector4 (rotation1 [6], rotation1 [7], rotation1 [8], 0);
+			Vector4 y4 = new Vector4 (0, 0, 0, 1);
+
+
+            // set col 不进行转置
+            ygx.SetColumn (0, y1);
+            ygx.SetColumn (1, y2);
+            ygx.SetColumn (2, y3);
+			ygx.SetColumn (3, y4);
+
+
+			Vector4 t = new Vector4 (-transform1 [0], transform1 [1], -transform1 [2], 1);
+            // Vector4 t4 = new Vector4(-transform1 [0], transform1 [2], -transform1 [1],1);
+			// cam.transform.position = ygx * t;
+            // cam.transform.position = t;
+
+            //tTranspose是转置矩阵。。。
+            // y1是列数据，放置在第一行，也就是进行了转置
+            Matrix4x4 tTranspose = Matrix4x4.identity;
+            tTranspose.SetRow(0,y1);
+            tTranspose.SetRow(1,y2);
+            tTranspose.SetRow(2,y3);
+            tTranspose.SetRow(3,y4);
+            Vector4 w_y = tTranspose.GetColumn(1);
+            Vector4 w_z = tTranspose.GetColumn(2);
+            Quaternion w_quat = Quaternion.LookRotation(new Vector3(w_z.x,w_z.y,w_z.z),new Vector3(w_y.x,w_y.y,w_y.z));
+
+            // Vector4 camPos = tTranspose*t;
+
+            // 使用欧拉角
+            Matrix4x4 matrix = ygx;  // 不转置的矩阵
+            // Matrix4x4 matrix = tTranspose; // 获得转置的变换矩阵，其实就是3*3的旋转矩阵做了增广（这样做因为没有3*3数组）
+            float x =57.3f*Mathf.Atan2(-matrix[1, 2], Mathf.Sqrt(matrix[1, 0] *matrix[1, 0] + matrix[1, 1] * matrix[1, 1]));
+            float y =57.3f*Mathf.Atan2(matrix[0,2], matrix[2,2]);
+            float z =57.3f*Mathf.Atan2(matrix[1,0],matrix[1,1]);
+
+            if (setModel)
+            {
+                maincam.transform.eulerAngles = new Vector3(-x,y,-z);
+                maincam.transform.position = t;
+            }
+
+            String text_out = 
+            rotation1 [0].ToString("0.0")+" "+
+            rotation1 [1].ToString("0.0")+" "+
+            rotation1 [2].ToString("0.0")+" "+"\n"+
+            rotation1 [3].ToString("0.0")+" "+
+            rotation1 [4].ToString("0.0")+" "+
+            rotation1 [5].ToString("0.0")+" "+"\n"+
+            rotation1 [6].ToString("0.0")+" "+
+            rotation1 [7].ToString("0.0")+" "+
+            rotation1 [8].ToString("0.0")+" "+ "\n"+
+            t[0].ToString("0.0")+" "+
+            t[1].ToString("0.0")+" "+
+            t[2].ToString("0.0");
+            ui_text.text = text_out;
+
+            
+        
+
+            
+            
+            // Debug.Log(z);
+
+        }
+    }
+}
+
+```
+
+---
+
+slam2.cs
+
+```
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+using System.Runtime.InteropServices;
+
+using System;
+using System.IO;
+using System.Linq;
+using System.Text;
+using UnityEngine.SceneManagement;
+using TMPro;
+public class androidCam : MonoBehaviour
+{
+    // public GameObject surface;
+
+
+    
+    public string devicename;
+    // public Texture2D t2d;
+    bool clicked=false;
+
+
+    	// Gyroscope gyro;
+	float w,x,y,z;
+	Quaternion quatMult;
+	Quaternion quatMap;
+
+	float[] transform1 = new float[3];
+	float[] rotation1 = new float[9];
+
+	float[] P = new float[3];
+	float[] E = new float[3];
+    float[] meanPoint = new float[3];
+    int range=15;
+
+
+
+	Color32[] data;
+	// public WebCamTexture webcamTexture;
+	// Texture2D tex;
+
+	byte[] imgData;
+
+	// bool isIMU;
+
+	// bool isProcess;
+	bool isshow = true ;
+    bool syncModelPosition = false;
+	// bool isFirst;
+	// public GameObject fightman;
+
+    public GameObject cam;
+    // Start is called before the first frame update  
+
+    public GameObject paimon; 
+    public GameObject camroot;
+
+    public WebCamTexture webCamTexture=null;
+    // bool isFirst=true;
+    public RawImage rawImage;
+    public GameObject plane;
+    public GameObject textMesh;
+    public TextMeshProUGUI ui_text;
+
+
+    //button
+    public Button btn_start;
+    public Button btn_setmodel;
+    public Button btn_reset;
+    public Button btn_savepic;
+    public Vector3 initPosition=new(0,0,0);
+
+
+
+
+
+
+    [DllImport ("libslamAR")]
+	private static extern int process_Image (byte[] ImageData, float[] T, float[] wxyz, ref bool isShow,int width,int height);
+
+	[DllImport("libslamAR")]
+	private static extern void reset ();
+
+    [DllImport("libslamAR")]
+    private static extern int fun(int x,int y);
+
+    [DllImport("libslamAR")]
+    private static extern void savepic();
+
+    [DllImport("libslamAR")]
+    private static extern int GetPoint(float[] xyz);
+
+    void Start()
+    {
+
+        // fun(1,1);
+        btn_start.onClick.AddListener(()=>{Startcam();});
+        btn_setmodel.onClick.AddListener(()=>{Setmodel();});
+        btn_reset.onClick.AddListener(()=>{ResetSlam();});
+        btn_savepic.onClick.AddListener(()=>{savepic();});
+        plane.SetActive(false);
+        ui_text = textMesh.GetComponent<TextMeshProUGUI>();
+        // this.transform.position = new Vector3(0,0,1,0);
+
+        // cam.transform.Rotate(new Vector3(90.0f,0,0));
+        
+    }
+
+
+    public void ResetSlam()
+    {
+        Debug.Log("reset slam");
+        // ui_text.text = "0 0 0";
+        reset();
+    }
+    public void Setmodel()
+    {
+        int iend;
+        iend = GetPoint(meanPoint);
+        Debug.Log(iend);
+        Vector3 vec = new Vector3(-meanPoint[0],-meanPoint[1],meanPoint[2]-1.6f);
+
+        // Vector3 dir = cam.transform.forward*3.0f + cam.transform.position;
+        // 把模型设置在点云的中心处，同时打开相机的跟踪：syncModelPosition
+        initPosition = vec;
+        // paimon.transform.position = vec;
+        paimon.transform.position = vec;
+        syncModelPosition = true;
+        // cam.transform.Rotate(new Vector3(90.0f,0,0));
+    }
+    public void Startcam()
+    {
+        // clicked=true;isProcess=true;
+        StartCoroutine(Call());
+    }
+ 
+    public IEnumerator Call()
+    {
+
+        // 请求权限
+        yield return Application.RequestUserAuthorization(UserAuthorization.WebCam);
+        if (!Application.HasUserAuthorization(UserAuthorization.WebCam))
+        {
+            yield return Application.RequestUserAuthorization(UserAuthorization.WebCam);//授权
+        };
+ 
+        if (Application.HasUserAuthorization(UserAuthorization.WebCam) && WebCamTexture.devices.Length > 0 )
+        {
+            Debug.Log(WebCamTexture.devices[0].name);
+            
+            // 创建相机贴图
+            // webCamTexture = new WebCamTexture(WebCamTexture.devices[0].name, Screen.width, Screen.height, 60);
+            webCamTexture = new WebCamTexture(WebCamTexture.devices[0].name,640,480,60);
+            
+            // webCamTexture.videoVerticallyMirrored  = true;
+            rawImage.texture = webCamTexture;
+            webCamTexture.Play();
+
+            imgData = new byte[webCamTexture.height * webCamTexture.width * 4];
+            data = new Color32[webCamTexture.height * webCamTexture.width];
+
+            Debug.Log("init");
+                        Debug.Log("cam length "+WebCamTexture.devices.Length+" "+WebCamTexture.devices[0].name+" "+webCamTexture.width+" "+webCamTexture.height);
+
+            clicked = true;
+
+
+        }
+    }
+
+    private void OnApplicationPause(bool pause)
+    {
+        // 应用暂停的时候暂停camera，继续的时候继续使用
+        if (webCamTexture !=null)
+        {
+            if (pause)
+            {
+                webCamTexture.Pause();
+            }
+            else
+            {
+                webCamTexture.Play();
+            }
+        }
+        
+    }
+    public void Color32ArrayToByteArray(Color32[] colors)
+	{
+		GCHandle handle = default(GCHandle);
+		handle = GCHandle.Alloc(colors, GCHandleType.Pinned);
+		IntPtr ptr = handle.AddrOfPinnedObject();
+		Marshal.Copy(ptr, imgData, 0, webCamTexture.height * webCamTexture.width*4);
+
+		if (handle != default(GCHandle))
+			handle.Free();
+	}
+	
+    
+    private void OnDestroy()
+    {
+        if (webCamTexture != null)
+        {
+            webCamTexture.Stop();
+        }
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        // webCamTexture.Stop();
+        // webCamTexture.Play();
+        // Color rgb = webCamTexture.GetPixel(10,10);
+        // Debug.Log(rgb.r);
+        if (clicked )
+        {
+            webCamTexture.GetPixels32(data);
+            Color32ArrayToByteArray(data);
+
+            process_Image(imgData, transform1, rotation1, ref isshow,webCamTexture.width,webCamTexture.height);
+            Matrix4x4 ygx = Matrix4x4.identity;
+			Vector4 y1 = new Vector4 (rotation1 [0], rotation1 [1], rotation1 [2], 0);
+			ygx.SetColumn (0, y1);
+			Vector4 y2 = new Vector4 (rotation1 [3], rotation1 [4], rotation1 [5], 0);
+			ygx.SetColumn (1, y2);
+			Vector4 y3 = new Vector4 (rotation1 [6], rotation1 [7], rotation1 [8], 0);
+			ygx.SetColumn (2, y3);
+			Vector4 y4 = new Vector4 (0, 0, 0, 1);
+			ygx.SetColumn (3, y4);
+
+			Vector4 vy = ygx.GetColumn (0);
+			Vector4 vz = ygx.GetColumn (1);
+			Quaternion newQ = Quaternion.LookRotation (new Vector3 (vz.x, vz.y, vz.z), new Vector3 (vy.x, vy.y, vy.z));
+
+			Vector4 t = new Vector4 (transform1 [0], -transform1 [1], transform1 [2], 1);
+            // Vector4 t4 = new Vector4(-transform1 [0], transform1 [2], -transform1 [1],1);
+			// cam.transform.position = ygx * t;
+            // cam.transform.position = t;
+
+            //tTranspose是转置矩阵。。。
+            // y1是列数据，放置在第一行，也就是进行了转置
+            Matrix4x4 tTranspose = Matrix4x4.identity;
+            tTranspose.SetRow(0,y1);
+            tTranspose.SetRow(1,y2);
+            tTranspose.SetRow(2,y3);
+            tTranspose.SetRow(3,y4);
+            Vector4 w_y = tTranspose.GetColumn(1);
+            Vector4 w_z = tTranspose.GetColumn(2);
+            Quaternion w_quat = Quaternion.LookRotation(new Vector3(w_z.x,w_z.y,w_z.z),new Vector3(w_y.x,w_y.y,w_y.z));
+
+            Vector4 camPos = tTranspose*t;
+
+
+            // 使用欧拉角
+            Matrix4x4 matrix = tTranspose; // 获得转置的变换矩阵
+            float x =57.3f*Mathf.Atan2(-matrix[1, 2], Mathf.Sqrt(matrix[1, 0] *matrix[1, 0] + matrix[1, 1] * matrix[1, 1]));
+            float y =57.3f*Mathf.Atan2(matrix[0,2], matrix[2,2]);
+            float z =57.3f*Mathf.Atan2(matrix[1,0],matrix[1,1]);
+        
+
+
+            if(!syncModelPosition)
+            {
+                // 点击Setmodel之前，设置模型的位姿与相机一致
+                // y1 -y2 y3 刚好是在c++端乘矩阵后，剩下的y2乘-1，也就是-R^T
+                // 实际测试中，可以表征相机位姿（世界坐标系中的相机）
+			    // paimon.transform.rotation = w_quat;
+
+            }
+            if(syncModelPosition)
+            {
+                // 开启了模型同步，也就是点击了setmodel之后
+                // 需要把相机设置为世界坐标and位姿
+                // cam.transform.position = new Vector3(camPos[0],camPos[2],camPos[1]);
+                // cam.transform.position = ;
+                // cam.transform.rotation = w_quat;
+
+			    // cam.transform.position = ygx * t;
+
+
+                cam.transform.eulerAngles = new Vector3(-x,y,-z);
+                cam.transform.position = t;
+
+            }
+
+            // Debug.Log("out"+ygx);
+            String rotationMatrix = 
+            "pose\n"+
+            rotation1 [0].ToString("0.0")+" "+
+            rotation1 [1].ToString("0.0")+" "+
+            rotation1 [2].ToString("0.0")+" "+"\n"+
+            rotation1 [3].ToString("0.0")+" "+
+            rotation1 [4].ToString("0.0")+" "+
+            rotation1 [5].ToString("0.0")+" "+"\n"+
+            rotation1 [6].ToString("0.0")+" "+
+            rotation1 [7].ToString("0.0")+" "+
+            rotation1 [8].ToString("0.0")+" "+ "\n"+
+            "model pos\n"+
+            initPosition[0].ToString("0.0")+" "+
+            initPosition[1].ToString("0.0")+" "+
+            initPosition[2].ToString("0.0")+" "+"\n"+
+            "current pos:\n"+
+            t[0].ToString("0.0")+" "+
+            t[1].ToString("0.0")+" "+
+            t[2].ToString("0.0");
+
+
+//          t[0] 1 2 
+//          x y z
+            if((t[0]<range && t[0]>-range)&&(t[1]<range && t[1]>-range)&&(t[2]<range && t[2]>-range))
+            {
+                paimon.SetActive(true);
+            }
+            else{
+                paimon.SetActive(false);
+            }
+
+
+            ui_text.text = rotationMatrix;
+            // ui_text.text = t[0].ToString("0.0")+" "+t[1].ToString("0.0")+" "+t[2].ToString("0.0");
+            // if([0]!=0.0)
+            // {
+            //     plane.SetActive(true);
+            // }
+
+        }
+
+
+
+    }
+
+}
+```
+
