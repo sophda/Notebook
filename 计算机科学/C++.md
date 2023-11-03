@@ -1943,9 +1943,9 @@ vector<vector<string>>
 
 4.1迭代器
 
-  *iter 返回迭代器 iter 所指向的元素的引用
+  ***iter 返回迭代器 iter 所指向的元素的引用**
 
- iter->mem 对 iter 进行解引用，获取指定元素中名为 mem 的成员。等效于 (*iter).mem
+ **iter->mem 对 iter 进行解引用，获取指定元素中名为 mem 的成员。等效于 (*iter).mem**
 
 ++iter， iter++ 给 iter 加 1，使其指向容器里的下一个元素
 
