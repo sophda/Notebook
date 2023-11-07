@@ -1007,6 +1007,55 @@ public class TreeCtrl : MonoBehaviour
 
 和orbslam2移植其实没有太大的区别，唯一要注意的是移植boost依赖库相关的部分，尤其是archive中的，这一部分应该是刚需动态库移植的，但是并没有成功。因此保留serialization并且去除archive
 
+## Boost库移植（static）
+
+使用的是来自boost-for-Android的项目[moritz-wundke/Boost-for-Android: Android port of Boost C++ Libraries (github.com)](https://github.com/moritz-wundke/Boost-for-Android)，需要在虚拟机环境中，在wsl中会报错（File/NVidia的错误，so,nvidia ,fuck you! ）
+
+相关配置：NDK:R25C    boost：1.82  Ubuntu18.04
+
+按照GitHub博主给出的步骤，首先，额没有首先，就一步：
+
+```
+./build-android.sh $(NDK_ROOT)
+```
+
+然后就会在目录里面生成一个build文件，里面有你想要的~
+
+**如果编译动态库的话，会有很多.so库带着版本号的后缀，如libxxx.so.1.80.0，这是不会被unity识别到的，因为这些还有.so库是这些库的软连接**
+
+所以直接上静态库，.a格式的文件，需要修改的就是：
+
+```
+build-android.sh中：
+修改：（默认情况就是这个）
+link=static
+```
+
+然后：
+
+```
+./build-android.sh $(NDK_ROOT)
+```
+
+会产生一系列的a静态库，我们需要这几个，主要是序列化相关的：
+
+![image-20231108005327565](src/image-20231108005327565.png)
+
+同时，需要同步修改cmakelist文件，将生成的库orbslam库链接到这些静态库上，这里在实验中，只需要把cmakelist中的：
+
+```
+link_directories()
+target_link_libraries()
+```
+
+这两个修改一下就可以，本质上跟动态库的链接方式一样的，但是你要是用`readeld -a xxx.so | grep "Shared"`来找的话，是不会显示静态库的哦~
+
+> 其实在网上找到的链接静态库的例子中，是这样子的：(也就是说，即使是静态库，也是用target_link_libraries来链接的)
+>
+> ![image-20231108005834602](src/image-20231108005834602.png)
+
+最后，在完成链接后，**保留slam源码的src/system.cc中的boost serialization部分，构建也不会出现符号找不到的情况，证明是成功链接上的**。复制到unity中，也可以找到静态库。
+
 ## 李群李代数
 
 > 旋转矩阵自身带有约束，行列式为1.因为这个约束，当作为优化变量时会变得困难。
@@ -1203,6 +1252,40 @@ int main() {
 ## 平面拟合
 
 > 使用ransac算法拟合
+
+哼哼~
+
+```c++
+extern "C"
+{
+    void FitPlane(double plane_arg[])
+    {
+        double a,b,c,d;
+        vector<ORB_SLAM3::MapPoint*> vpmaps ;
+        SLAM.GetLocalMap(vpmaps);
+        vector<Point3f> mapPoints;
+        for(size_t i = 0,iend = vpmaps.size();i<iend;i++)
+        {
+            if (vpmaps[i]->isBad())
+                continue;
+            Eigen::Matrix<float ,3,1> pos = vpmaps[i]->GetWorldPos();
+            Point3f tmpPoint;
+            tmpPoint.x = pos(0);
+            tmpPoint.y = pos(1);
+            tmpPoint.z = pos(2);
+            mapPoints.push_back(tmpPoint);
+        }
+        ransac(mapPoints,100,2,a,b,c,d);
+        plane_arg[0] = a;
+        plane_arg[1] = b;
+        plane_arg[2] = c;
+        plane_arg[3] = d;
+    }
+}
+
+```
+
+
 
 ## unity（c#）
 
