@@ -148,7 +148,7 @@ include_directories($ENV{INCLUDE_PATH}/include)
 
 引入的头文件如果需要了其他的文件，还需要使用add_executable把对应的文件包含进去
 
-## link_directories
+## link_directories(要放在add_library前面)
 
 **引入库目录，添加库文件的搜索路径**，若工程在编译的时候会需要用到某个第三方库的 lib 文件，此时就可以使用 link_libraries 来添加搜索路径。
 

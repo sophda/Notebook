@@ -1013,7 +1013,7 @@ class Node
 
 class BinaryTree
 {
-	private :
+	
 	    Node *node;
 }
 
@@ -1723,7 +1723,7 @@ int main()
 
 # 堆和栈(包含隐式转换的解释)
 
-1. 栈的作用域：{}，所以一旦离开了栈的作用域，作用域内的内容会消失
+1. **栈的作用域：{}，所以一旦离开了栈的作用域，作用域内的内容会消失**
 
 2. 使用new关键词新建的内容是在**堆**上，所以即使是离开{}的作用域，指针也会继续存在 
 
@@ -1795,6 +1795,22 @@ Print<int>(5);
 
 ## 类模板
 
+类模板本质上是在避免重复性的工作。
+
+```
+template<class name>
+class Example
+{
+ ....
+}
+int main()
+{
+	Example<int> ***;
+}
+```
+
+
+
 ```c++
 template<int N>
 class Array
@@ -1833,7 +1849,9 @@ void main()
 
 # auto关键词
 
-# 线程
+# 多线程
+
+![img](src/v2-76e5e48c9c1d60f9868452cfc9ce7d85_720w.webp)
 
 ## 定义
 
@@ -1841,9 +1859,11 @@ void main()
 
 - 一个程序有且只有一个进程，按时可以有多个线程
 - 不同的进程有不同的地址空间，互不相关。但是不同的线程有共同进程的地址空间
-- 在c中有pthread的库进行多线程编程。但是在c++ 11中出现了std::thread的东西，所以在使用了这个threa的有的库的编译选项不用选择ptread
+- 在c中有pthread的库进行多线程编程。但是在c++ 11中出现了std::thread的东西，所以在使用了这个thread的有的库的编译选项不用选择ptread
 
-**基础使用：**
+**基础使用：（只需要把函数名传进去就可以了）**
+
+形式1：
 
 ```c++
 // Compiler: MSVC 19.29.30038.1
@@ -1851,32 +1871,153 @@ void main()
 #include <iostream>
 #include <thread>
 using namespace std;
-void doit() { cout << "World!" << endl; }
-int main() {
-	// 这里的线程a使用了 C++11标准新增的lambda函数
-	// 有关lambda的语法，请参考我之前的一篇博客
-	// https://blog.csdn.net/sjc_0910/article/details/109230162
-	thread a([]{
-		cout << "Hello, " << flush;
-	}), b(doit);
-	a.join();
-	b.join();
-	return 0;
+std::thread myThread ( thread_fun);
+//函数形式为void thread_fun()
+myThread.join();
+```
+
+形式2：
+
+```
+std::thread myThread ( thread_fun(100));
+myThread.join();
+//函数形式为void thread_fun(int x)
+//同一个函数可以代码复用，创建多个线程
+```
+
+形式3：
+
+```
+std::thread (thread_fun,1).detach();
+//直接创建线程，没有名字
+//函数形式为void thread_fun(int x)
+```
+
+
+
+## join 和 detach
+
+- detach方式，启动的线程**自主在后台运行，当前的代码继续往下执行，不等待新线程结束**。
+- join方式，**等待启动的线程完成，才会继续往下执行**
+
+**join模式：join之后的代码都不会执行。**
+
+```text
+#include <iostream>
+#include <thread>
+using namespace std;
+void thread_1()
+{
+  while(1)
+  {
+  //cout<<"子线程1111"<<endl;
+  }
+}
+void thread_2(int x)
+{
+  while(1)
+  {
+  //cout<<"子线程2222"<<endl;
+  }
+}
+int main()
+{
+    thread first ( thread_1); // 开启线程，调用：thread_1()
+    thread second (thread_2,100); // 开启线程，调用：thread_2(100)
+
+    first.join(); // pauses until first finishes 这个操作完了之后才能destroyed
+    second.join(); // pauses until second finishes//join完了之后，才能往下执行。
+    while(1)
+    {
+      std::cout << "主线程\n";
+    }
+    return 0;
+}
+```
+
+**detach模式：将子线程放在后台执行，主线程不会被阻塞：**
+
+```
+#include <iostream>
+#include <thread>
+using namespace std;
+
+void thread_1()
+{
+  while(1)
+  {
+      cout<<"子线程1111"<<endl;
+  }
+}
+
+void thread_2(int x)
+{
+    while(1)
+    {
+        cout<<"子线程2222"<<endl;
+    }
+}
+
+int main()
+{
+    thread first ( thread_1);  // 开启线程，调用：thread_1()
+    thread second (thread_2,100); // 开启线程，调用：thread_2(100)
+
+    first.detach();                
+    second.detach();            
+    for(int i = 0; i < 10; i++)
+    {
+        std::cout << "主线程\n";
+    }
+    return 0;
+}
+```
+
+
+
+## Thread使用类成员函数
+
+```
+#include <iostream>
+#include <thread>
+using namespace std;
+class Sum{
+public:
+    int x,y;
+    Sum(){
+        cout<<"created"<<endl;
+    }
+
+
+    void circle()
+    {
+        while (1)
+            cout<< "hello"<<endl;
+    }
+};
+int main()
+{
+    Sum test;
+    thread *threading_ = new thread(&Sum::circle,&test);
+    threading_->join();
+
 }
 
 ```
 
-**注意事项：**
+如果是调用类成员函数，需要在`thread()`函数中**加上是哪一个类成员函数，以及哪一个对象的类成员函数**
 
-- 线程是thread对象被定义的时候就会执行，而不是join函数才执行的，调用join函数只是阻塞等待线程结束并回收资源
-- 分离的线程（执行过detach的线程）会在调用它的线程结束或自己结束时释放资源
-- 线程会在函数运行完毕后自动释放
+这个程序包含了一个主线程main（），join的作用就是阻塞主线程，当子线程执行完毕后，主线程才会结束。
+
+
 
 ## std::atomic和std::mutex
 
 多个线程进行时，如果操作同一个变量，那么肯定会出错，所以出现了这两个东西。
 
 **std::mutex**
+
+mutex可以看成是一个全局性的声明，当有一个线程操作变量时，使用`mutex.lock()`，那么这个变量只能在当前线程进行操作，其他线程无权操作。操作完之后，使用`mutex.unlock()`
 
 ```c++
 // Compiler: MSVC 19.29.30038.1
@@ -1921,6 +2062,43 @@ mutex实例化的对象成员函数：
 **std::atomic**
 
 
+
+
+
+## lock_guard（）
+
+创建lock_guard对象时，它将尝试获取提供给它的互斥锁的所有权。当控制流离开lock_guard对象的作用域时，lock_guard析构并释放互斥量。lock_guard的特点：
+
+- 创建即加锁，作用域结束自动析构并解锁，无需手工解锁
+- 不能中途解锁，必须等作用域结束才解锁
+
+
+
+## unique_lock（）
+
+简单地讲，unique_lock 是 lock_guard 的升级加强版，它具有 lock_guard 的所有功能，同时又具有其他很多方法，使用起来更加灵活方便，能够应对更复杂的锁定需要。unique_lock的特点：
+
+- 创建时可以不锁定（通过指定第二个参数为std::defer_lock），而在需要时再锁定
+- 可以随时加锁解锁
+- 作用域规则同 lock_grard，析构时自动释放锁
+- 不可复制，可移动
+- 条件变量需要该类型的锁作为参数（此时必须使用unique_lock）
+
+所有 lock_guard 能够做到的事情，都可以使用 unique_lock 做到，反之则不然。那么何时使lock_guard呢？很简单，需要使用锁的时候，首先考虑使用 lock_guard，因为lock_guard是最简单的锁。
+
+unique_lock是一个类，其中管理了一个私有变量，在初始化的过程中会把mutex复制给这个私有变量。在类初始化的时候，会对着个mutex自动枷锁，执行析构的时候会自动解锁。
+
+![image-20231118024706561](src/image-20231118024706561.png)
+
+`std::unique_lock` 对象的析构函数在以下情况下执行：
+
+1. 当 `std::unique_lock` **对象超出其作用域时，即离开了对象所在的代码块时，析构函数会被调用**。
+2. 当 `std::unique_lock` 对象被显式地销毁时，即通过调用 `std::unique_lock` 对象的 `unlock()` 或 `release()` 成员函数，或者将其赋值为另一个 `std::unique_lock` 对象时，析构函数会被调用。
+3. 当 `std::unique_lock` 对象作为参数传递给一个函数，并在函数内部被销毁时，析构函数会被调用。
+
+需要注意的是，当 `std::unique_lock` 对象的析构函数被调用时，它会自动释放所管理的互斥量。这意味着，当 `std::unique_lock` 对象被销毁时，它所持有的互斥量将被解锁。这种自动解锁的机制可以有效地避免忘记手动释放互斥量而导致的死锁等问题。
+
+**众所周知，{}是放在栈上面的，所以离开了作用域后，就会执行析构函数，自动给mutex解锁。**
 
 # 容器
 
