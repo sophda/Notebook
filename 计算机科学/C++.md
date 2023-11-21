@@ -1,7 +1,3 @@
-
-
-> 来自b站视频，以及书，博客。尽量偏系统
-
 # 类型及关键词
 
 内存：memory
@@ -77,6 +73,8 @@ int main() {
     out.close();
 }
 ```
+
+
 
 
 
@@ -369,6 +367,48 @@ int main()
 - 使用unique_ptr或其他智能指针来初始化或赋值shared_ptr。这种方法会转移所有权，并且可以指定自定义删除器。例如：`auto up = unique_ptr<int>(new int(42)); auto sp = shared_ptr<int>(move(up));`
 
 使用shared_ptr时，可以通过解引用运算符（*）或箭头运算符（->）来访问其所管理的对象，也可以通过get()函数来获取原始指针，或者通过use_count()函数来获取共享所有权的数量。
+
+
+
+---
+
+## 显式和隐式转换
+
+1. 显式转换（Explicit Conversion）：
+   显式转换是由程序员明确指定要进行类型转换的代码。它需要使用类型转换运算符（如static_cast、dynamic_cast、const_cast和reinterpret_cast）来执行转换。显式转换可以在任何情况下进行，包括非法的类型转换。例如：
+
+   ```
+   int a = 10;  
+   double b = static_cast<double>(a);  // 显式地将int转换为double
+   ```
+
+2. 隐式转换（Implicit Conversion）：
+   隐式转换是由编译器自动进行的类型转换，无需程序员显式指定。这种转换通常发生在赋值操作、函数调用、表达式计算等场景中。隐式转换通常要求转换后的类型与原始类型兼容，并且不会导致数据丢失或不可预测的行为。例如：
+
+```cpp
+int a = 10;  
+double b = a;  // 隐式地将int转换为double
+```
+
+在上述示例中，变量a的类型是int，变量b的类型是double。在将a赋值给b时，编译器会自动将int类型的a隐式地转换为double类型，并将结果赋值给变量b。
+
+总结：
+显式转换和隐式转换的主要区别在于是否由程序员明确指定要进行类型转换。显式转换需要使用特定的类型转换运算符，而隐式转换则由编译器自动完成。在使用显式转换时，程序员应该清楚地知道正在进行的类型转换是否合法和预期的，而在使用隐式转换时，编译器会根据需要进行适当的类型转换。
+
+## 上行转换和下行转换
+
+其实：
+
+- 上行转换就是子类向基类转换
+- 下行转换就是基类向子类转换
+
+
+
+## 类型转换（各种cast）
+
+
+
+
 
 
 
@@ -726,6 +766,44 @@ int main()
 // player对象继承了父类entity的所有内容
 ```
 
+```cpp
+class example
+{
+private:
+	int x,y,z;
+	std::string m_Name;
+public:
+	example()
+		// 这是初始化的操作
+		:x(0),y(0),z(0),m_Name("hello")
+		{
+		
+		}
+}
+```
+
+但是，但我们将初始化不用：表示时，
+
+```cpp
+class example
+{
+private:
+	int x,y,z;
+	std::string m_Name;
+	// 在这里构造了一次
+public:
+	example()
+		// 这是初始化的操作
+		:x(0),y(0),z(0)
+		{
+		m_Name = "hello";
+		//不用：进行初始化，这里会把上面初始化的删除，
+		// 然后再用“hello”覆盖掉上面的
+		// 所以是构造了两次，浪费了性能
+		}
+}
+```
+
 
 
 ## NEW
@@ -780,7 +858,7 @@ int main()
 
 
 
-## ：：
+## ::
 
 双冒号 :: 操作符被称为域操作符(scope operator)，含义和用法如下：
 
@@ -1631,46 +1709,6 @@ int main() {
 
 上面这一种情况，因为基类包含virtual函数，则会有个虚函数表指针（大小为指针大小）。子类是继承的，所以也有。在执行`Entity* entity = dynamic_cast<Entity* >(p);`时，基类的虚函数表指针是在内存中的，属于类的成员变量，那么基类的虚函数表指针也会被赋值为子类的虚函数表指针，这时，就会执行子类的函数。进而输出“”
 
-# 9.初始化 ：
-
-```cpp
-class example
-{
-private:
-	int x,y,z;
-	std::string m_Name;
-public:
-	example()
-		// 这是初始化的操作
-		:x(0),y(0),z(0),m_Name("hello")
-		{
-		
-		}
-}
-```
-
-但是，但我们将初始化不用：表示时，
-
-```cpp
-class example
-{
-private:
-	int x,y,z;
-	std::string m_Name;
-	// 在这里构造了一次
-public:
-	example()
-		// 这是初始化的操作
-		:x(0),y(0),z(0)
-		{
-		m_Name = "hello";
-		//不用：进行初始化，这里会把上面初始化的删除，
-		// 然后再用“hello”覆盖掉上面的
-		// 所以是构造了两次，浪费了性能
-		}
-}
-```
-
 
 
 
@@ -2102,24 +2140,22 @@ unique_lock是一个类，其中管理了一个私有变量，在初始化的过
 
 # 容器
 
-## 容器入门
+## vector
 
-1.顺序容器 vector、list、queue
-
-2.定义
+**definition**
 
 ```c
 #include<vector>
 vector<string> sver;
 ```
 
-3.容器的容器
+**容器的容器**
 
 ```c
 vector<vector<string>>
 ```
 
-4.1迭代器
+**迭代器**
 
   ***iter 返回迭代器 iter 所指向的元素的引用**
 
@@ -2127,55 +2163,13 @@ vector<vector<string>>
 
 ++iter， iter++ 给 iter 加 1，使其指向容器里的下一个元素
 
-4.2迭代器中点
+迭代器中点
 
 vector::iterator iter = vec.begin() + vec.size()/2;
 
 创建iter迭代器，指向容器中的元素
 
-4.3迭代器  begin  end
-
-begin 和 end 操作产生指向容器内第一个元素和最后一个元素的下一位置 的迭代器
-
-c.begin()返回一个迭代器，指向容器c的第一个元素
-
-c.end()返回一个迭代器，指向C最后一个元素的下一位置
-
-c.rbegin()返回逆序迭代器，指向最后一个元素
-
-c.rend()返回逆序迭代器，指向c的第一个元素前面的位置
-
-4.4迭代器中增加元素  push_back
-
-push_back向容器尾部插入一个元素
-
-string txt;
-
-container.push_back(txt);
-
-![](src/2023-02-14-01-44-45-image.png)
-
-4.5访问顺序容器内的元素
-
-![](src/2023-02-14-01-45-12-image.png)
-
-![](src/2023-02-14-01-45-21-image.png)
-
-4.6 删除顺序容器内的元素
-
-![](src/2023-02-14-02-02-59-image.png)
-
-删除所有元素时：c.clear()
-
-4.7 仅适用string容器的操作  append  replace
-
-![](src/2023-02-14-02-03-28-image.png)
-
-5.emplace
-
-直接向构造函数传递参数
-
-6.访问容器
+5.访问容器
 
 ```c
 //1.1 iterator显示声明
@@ -2213,15 +2207,155 @@ for (auto iter : test)
 }
 ```
 
+### 相关函数
+
+- vector::reserve()
+
+  ```
+  /**
+  *@function 申请n个元素的内存空间
+  *@param n  元素个数
+  */
+  void reserve (size_type n);
+  
+  ```
+
+  也就是说reserve是申请内存空间，但是vector可以自动拓展的，也就是根据元素的个数自动申请内存，那么为什么还要使用reverse去申请内存呢？
+
+  对比下两种方法：
+
+  ```
+  fun 1：
+  vector vec;
+  vector.push_back();//调用100次
+  
+  fun 2 :
+  vec.reserve(100);
+  vec.push_back(); //调用100次
+  ```
+
+  这两种方法中，fun1需要申请100次内存，相当耗时；但是fun2的话就申请了一次内存，相对来说可以减少了很多时间
+
 ## 关联容器
 
-**map**
+### **map**
 
 按关键词有序保存元素，使用“键--值“对
 
+与普通数组不同的是：map可以实现任意类型到任意类型的映射。
+
+1. 可以将任何基本类型映射到任何基本类型。如int array[100]事实上就是定义了一个int型到int型的映射。
+2. map提供一对一的数据处理，key-value键值对，其类型可以自己定义，第一个称为关键字，第二个为关键字的值
+3. map内部是自动排序的
+
+**通过迭代器访问**
+
+map可以使用it->first来访问键，使用it->second访问值
+
+```c++
+#include<map>
+#include<iostream>
+using namespace std;
+int main()
+{
+   map<char,int>maps;
+   maps['d']=10;
+   maps['e']=20;
+   maps['a']=30;
+   maps['b']=40;
+   maps['c']=50;
+   maps['r']=60;
+   for(map<char,int>::iterator it=mp.begin();it!=mp.end();it++)
+   {
+       cout<<it->first<<" "<<it->second<<endl;
+   }
+   return 0;
+}
+```
+
+**常用函数：**
+
+- maps.insert() 插入
+
+  ```cpp
+  // 定义一个map对象
+  map<int, string> m;
+   
+  //用insert函数插入pair
+  m.insert(pair<int, string>(111, "kk"));
+   
+  // 用insert函数插入value_type数据
+  m.insert(map<int, string>::value_type(222, "pp"));
+   
+  // 用数组方式插入
+  m[123] = "dd";
+  m[456] = "ff";
+  ```
+
+- maps.find() 查找一个元素
+
+  find(key): 返回键是key的映射的迭代器
+
+  ```c++
+  map<string,int>::iterator it;
+  it=maps.find("123");
+  ```
+
+  这个find是返回了一个iterator，可以直接对这个值前/后进行遍历。如果直接从map中取值，也可以`map["123"]`
+
+- maps.clear()清空
+
+- maps.erase()删除一个元素
+
+  ```c++
+  //迭代器刪除
+  it = maps.find("123");
+  maps.erase(it);
+  
+  //关键字删除
+  int n = maps.erase("123"); //如果刪除了返回1，否则返回0
+  
+  //用迭代器范围刪除 : 把整个map清空
+  maps.erase(maps.begin(), maps.end());
+  //等同于mapStudent.clear()
+  ```
+
+- maps.szie()长度
+
+  ```
+  int len=maps.size();获取到map中映射的次数
+  ```
+
+- maps.begin()返回指向map头部的迭代器
+
+  maps.end()返回指向map末尾的迭代器
+
+  ```
+  map< string,int>::iterator it;
+  for(it = maps.begin(); it != maps.end(); it++)
+      cout<<it->first<<" "<<itr->second<<endl;//输出key 和value值
+  ```
+
+- maps.empty()判断其是否为空
+
+- maps.swap()交换两个map
+
+- maps.count()
+
+  查找容器中是否存在某个元素，**结果只能是0或1**
+
+  ```
+  maps.count("123")
+  ```
+
+**count与find的区别：**
+
+- find方法返回的是一个迭代器，查找成功则返回迭代器，迭代器指向需要查找的元素。找不到的话：就返回迭代器，指向end
+- count返回1，表示找到了；返回0则相反
+
 ***
 
-**set**
+### **set**
 
 关键字即值，即只保存关键词的容器
 
@@ -2259,7 +2393,7 @@ int main()
 
 ***
 
-**multimap**
+### **multimap**
 
 关键字可以重复的map
 
