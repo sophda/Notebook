@@ -406,9 +406,13 @@ double b = a;  // 隐式地将int转换为double
 
 ## 类型转换（各种cast）
 
+### reinterpret_cast
 
+这个的作用是重新解释，也就是对一块内存区域重新解释含义，并不修改内存区域的值。
 
+有什么用捏？
 
+- 比如写的是数据库或者网络协议栈，可能原始数据都是字节流，比如用unsigned char []来接收那个字节流，那么在解码的时候就需要根据额外的信息（比如规定这个数据的类型，类的结构等）来推断这个字节流表示的是什么数据类型
 
 
 
@@ -486,7 +490,7 @@ void ptrswap(int *&v1,int *&v2)
 // 作用是使用“指向指针的引用”来交换两个指针
 ```
 
-## 
+
 
 
 
@@ -715,7 +719,7 @@ void main()
 可以理解为用空间换时间
 ```
 
-## 
+
 
 # 7.类
 
@@ -1183,7 +1187,111 @@ b在构造时，只是创造了个A类型的空指针，在执行构造函数，
 
 
 
+## 类的生命周期
 
+一个类的定义如下：
+
+```c++
+class MyClass{
+private:
+    int a,b;
+    friend class boost::serialization::access;
+
+    template<class Archive>
+    void serialize(Archive &ar ,const unsigned int version){
+        ar & a;
+        ar & b;
+    }
+public:
+    void print_()
+    {
+        cout << a<<" "<<b<<endl;
+    }
+    MyClass()
+    {
+
+    }
+    ~MyClass()
+    {
+        cout<< "delete class"<<endl;
+    }
+    MyClass(int x,int y):
+    a{x},b{y}
+    {
+        cout<< "created"<<endl;
+    }
+
+};
+```
+
+- 如果是**类的对象**
+
+  ```
+  int main() {
+  
+      MyClass a = MyClass(10,20);
+  
+      cout << "exec exit" <<endl;
+  }
+  ```
+
+  这样写会输出：
+
+  ![image-20231123002044059](src/image-20231123002044059.png)
+
+  也就是说：先调用类的初始化函数，然后输出字符串，最后main函数结束的时候，在执行类的析构函数，输出delete class
+
+- 如果**类的对象存在于{}，也就是栈中**
+
+  ```
+  int main() {
+      
+      {
+          MyClass a = MyClass(10,20);
+      }
+      cout << "exec exit" <<endl;
+  }
+  ```
+
+  这样会输出：
+
+  ![image-20231123002259270](src/image-20231123002259270.png)
+
+  也就是说，**类的对象放在栈上的，当这部分作用域结束时，就执行了类的析构函数**
+
+- 如果**类的对象申请在堆上，也就是new**
+
+  ```
+  int main() {
+  
+      {
+          MyClass *a = new MyClass(10,20);
+      }
+      cout << "exec exit" <<endl;
+  }
+  ```
+
+  这样会输出：
+
+  ![image-20231123002526301](src/image-20231123002526301.png)
+
+  哼哼哼啊啊啊啊啊，也就是说这个对象根本没有执行析构函数，到这个进程结束也没有啊啊啊！！**就是因为这个对象的内存存在于堆上**
+
+  这也就是c++容易内存溢出的原因，需要手动delete这个对象。
+
+  但是！！！！如果这样写：
+
+  ![image-20231123003341993](src/image-20231123003341993.png)
+
+  **因为a这个指针存在于栈上，所以超出了作用域，a这个指针是消失了，但是内存并没有被释放。所以在{}空间内，也就是栈中（常见的比如：函数等）不要去new一个内存**
+
+  所以这个a指针，需要手动去delete：
+
+  ![image-20231123003434743](src/image-20231123003434743.png)
+
+  ![image-20231123003445901](src/image-20231123003445901.png)
+
+  可以看到，在调用`delete a;`的时候，执行了类的析构函数。
 
 
 
@@ -2397,3 +2505,133 @@ int main()
 
 关键字可以重复的map
 
+
+
+
+
+
+
+# boost
+
+## serialization
+
+> 序列化：如果说我们定义了一个类，然后我们想把这个类的对象保存到文件中去，或者通过网络发送出去，那么我们就可以将这个对象序列化，得到二进制字节流。
+
+boost的序列化可以分为两种模式，一种是**侵入式**，另一种是**非侵入式**
+
+### 侵入式
+
+首先定义一个类：（access就是接触，侵入式的）
+
+```c++
+class CMyData
+{
+private:
+	friend class boost::serialization::access; 
+ 
+	template<class Archive>
+	void serialize(Archive& ar, const unsigned int version)
+	{
+		ar & _tag;
+		ar & _text;
+	}
+ 
+
+public:
+	CMyData():_tag(0), _text(""){}
+ 
+	CMyData(int tag, std::string text):_tag(tag), _text(text){}
+ 
+	int GetTag() const {return _tag;}
+	std::string GetText() const {return _text;}
+ 
+private:
+	int _tag;
+	std::string _text;
+};
+```
+
+可以看到下面这个代码：
+
+```c++
+friend class boost::serialization::access;
+ 
+	template<class Archive>
+	void serialize(Archive& ar, const unsigned int version)
+	{
+		ar & _tag;
+		ar & _text;
+	}
+```
+
+就是把我们需要的`_tag`以及`_text`两个私有变量进行了保存，而其他的类成员是函数。为什么函数不会写进序列化中呢？答：因为保存的只是对象的变量，函数的话保存在类的定义里，需要重新实例化这个类，然后加载相关的数据。
+
+接下来可以通过下面的代码进行保存：
+
+```c++
+void TestArchive1()
+{
+	CMyData d1(2012, "China, good luck");
+	std::ostringstream os;
+	boost::archive::binary_oarchive oa(os);
+	oa << d1;//序列化到一个ostringstream里面
+ 
+	std::string content = os.str();//content保存了序列化后的数据。
+ 
+	CMyData d2;
+	std::istringstream is(content);
+	boost::archive::binary_iarchive ia(is);
+	ia >> d2;//从一个保存序列化数据的string里面反序列化，从而得到原来的对象。
+ 
+	std::cout << "CMyData tag: " << d2.GetTag() << ", text: " << d2.GetText() << "\n";
+}
+```
+
+**我的例子：**
+
+```c++
+class MyClass{
+private:
+    int a,b;
+    friend class boost::serialization::access;
+
+    template<class Archive>
+    void serialize(Archive &ar ,const unsigned int version){
+        ar & a;
+        ar & b;
+    }
+public:
+    void print_()
+    {
+        cout << a<<" "<<b<<endl;
+    }
+    MyClass()
+    {
+
+    }
+    MyClass(int x,int y):
+    a{x},b{y}
+    {
+        cout<< "created"<<endl;
+    }
+
+};
+
+int main()
+{
+    {
+    MyClass t = MyClass(123, 456);
+    ofstream os("/home/sophda/project/learncpp/file/param.bin");
+    boost::archive::binary_oarchive oa(os);
+    oa << t;
+	}
+
+    MyClass p;
+    ifstream is("/home/sophda/project/learncpp/file/param.bin");
+    boost::archive::binary_iarchive ina(is);
+    ina>>p;
+    p.print_();
+}
+```
+
+**说明**：在main函数中，要将保存序列化的部分放到`{}`中，这样做是保证在`{}`作用域执行完毕后，就可以调用archive的析构函数了，这样才能保证保存的数据没有问题。复习一下：一个类在`{}`中，在`{}`中的部分执行完后，会调用这个类的析构函数。因此unique_lock放在`{}`中，执行完后会执行析构，自动为这个mutex解锁。
