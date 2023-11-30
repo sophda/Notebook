@@ -756,3 +756,88 @@ N_sub_y = 1;                % y方向阵元的细分，即y方向子阵元数量
 ```
 
  
+
+## 使用流程
+
+![image-20231126174040160](src/image-20231126174040160.png)
+
+**初始化**
+
+对采样频率、传感器阵元尺寸、声速等进行配置
+
+介质中，与声场衰减有关的参数：频率相关衰减、频率无关衰减、扩散衰减（传播时发生扩散，造成声场幅度衰减，field只能设置剩下两个）
+
+- xdc_linear_multirow  
+- xdc_2d_array 可以设置传感器任意形状，可以用作同心圆环仿真
+
+
+
+
+
+# field python
+
+## 安装
+
+**需要创建一个虚拟环境，然后再虚拟环境中创建执行这些命令**
+
+**对于出现的module not found：**需要更新一下pip以及setuptools
+
+```
+python -m pip install --upgrade --force pip
+pip install setuptools==57.5.0
+```
+
+
+
+### python env
+
+matlab 2019 b 以及python3.7
+
+```
+conda create -n myenv python=3.7
+conda activate myenv
+```
+
+### install pyfield
+
+```
+git clone https://github.com/bdshieh/pyfield.git
+cd pyfield
+pip install .
+```
+
+### install matlab engine api for python
+
+```
+cd $matlabroot/extern/engines/python/
+python setup.py install
+```
+
+## example
+
+```python
+# import matlab.engine
+from pyfield import PyField
+import time
+field = PyField()
+field.field_init()
+field.set_field('c',1500)
+field.set_field('fs',100e6)
+field.set_field('att',0)
+field.set_field('freq_att',0)
+field.set_field('att_f0',7e6)
+field.set_field('use_att',1)
+t = time.localtime()
+print(t.tm_min,t.tm_sec)
+th = field.xdc_linear_array(32,100e-6,0.01,10e-6,1,4,[0,0,30])
+field.xdc_show(th)
+
+t = time.localtime()
+print(t.tm_min,t.tm_sec)
+# for i in range(0,10000):
+#     sir,sir_t0 = field.calc_h(th,[0,0,i/1000])
+#     print(sir)
+t = time.localtime()
+print(t.tm_min,t.tm_sec)
+```
+
