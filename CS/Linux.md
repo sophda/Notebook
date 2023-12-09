@@ -120,11 +120,26 @@ echo ${NDK}
 
    ```
    objdump -a xxx.a
-   
-   
    ```
-
    
+
+
+
+## 杀死进程
+
+```
+pgrep -f your_process_name //获取进程号，即pid
+kill -15 pid  //根据pid杀死进程，15表示优雅的退出
+```
+
+比如，我的clion界面没有了（cnm在wsl中b事这么多），但是后台还在运行，所以需要kill掉
+
+```
+pgrep -f clion
+kill -15 pid
+```
+
+
 
 # sh脚本
 
