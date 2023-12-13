@@ -454,7 +454,8 @@ someOpenGLFunctionThatDrawsOurTriangle();
 
 这是一种从CPU中的应用向GPU中的着色器发送数据的方式，但是uniform和顶点属性些许不同。
 
-#version 330 core
+version 330 core
+
 out vec4 FragColor;
 
 uniform vec4 ourColor; // 在OpenGL程序代码中设定这个变量
