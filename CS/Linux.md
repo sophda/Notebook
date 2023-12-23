@@ -11,7 +11,9 @@ tar -xf cv.tar.xz  //解压
 ### 压缩
 
 ```
-
+tar -cvf [文件名].tar [文件目录] //打包成.tar文件
+tar -jcvf [文件名].tar.bz2 [文件目录] //打包成.bz2文件
+tar -zcvf [文件名].tar.gz [文件目录] //打包成.gz文件
 ```
 
 ## 编译

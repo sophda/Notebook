@@ -76,9 +76,30 @@ int main() {
 
 
 
+## 二进制文件写入
 
+```c++
+#include <iostream>
+#include <fstream>
+using namespace std;
+class CStudent
+{
+public:
+    char szName[20];
+    int age;
+};
+int main()
+{
+    CStudent s;
+    ofstream outFile("students.dat", ios::out | ios::binary);
+    while (cin >> s.szName >> s.age)
+        outFile.write((char*)&s, sizeof(s));
+    outFile.close();
+    return 0;
+}
+```
 
-
+如果有个字符串s，要保存成二进制文件，需要获取s变量的指针的首地址，然后指定写入长度。
 
 
 

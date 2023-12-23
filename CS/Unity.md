@@ -476,13 +476,13 @@ $$
 1. 在 **Build** 部分中，选择 `Custom Main Gradle Template` 和 `Custom Gradle Properties Template`。
 
 2. 将以下代码行添加到 `Assets/Plugins/Android/mainTemplate.gradle` 的依赖项部分：
-   
+  
    ```
    implementation 'androidx.appcompat:appcompat:1.4.2'  implementation 'com.google.android.gms:play-services-vision:20.1.3'  implementation 'com.google.android.material:material:1.6.1'implementation 'com.google.protobuf:protobuf-javalite:3.19.4'
    ```
 
 3. 将以下几行代码添加到 `Assets/Plugins/Android/gradleTemplate.properties`：
-   
+  
    ```
    android.enableJetifier=true  
    android.useAndroidX=true
@@ -1291,6 +1291,8 @@ extern "C"
 
 ## unity（c#）
 
+### code
+
 slam3.cs
 
 ```
@@ -1898,3 +1900,10 @@ public class androidCam : MonoBehaviour
 }
 ```
 
+### field of view
+
+> field of view如果调整不对，如果你的手机移动一点，但是unitty中的模型可能就移动了很多
+
+fov与手机相机的内参有关，如果标定过了，可以直接使用。fov对应的是两个轴上的，在unity中，也有两个方向的值可以对应，但是两个值之间是对应的。在完成计算后，这些是用弧度表示的，所以要转换成角度值，然后放到unity中的fov处
+
+![image-20231214175338688](src/image-20231214175338688.png)
