@@ -1907,3 +1907,112 @@ public class androidCam : MonoBehaviour
 fov与手机相机的内参有关，如果标定过了，可以直接使用。fov对应的是两个轴上的，在unity中，也有两个方向的值可以对应，但是两个值之间是对应的。在完成计算后，这些是用弧度表示的，所以要转换成角度值，然后放到unity中的fov处
 
 ![image-20231214175338688](src/image-20231214175338688.png)
+
+
+
+
+
+## 重定位
+
+### SYSTEM
+
+- 在atlas开启的时候，需要新建一个新的地图，然后后续新建地图，会进行merge。也就是说，在**建图时**，需要在atlas中新建地图。但是如果在**定位环节**，需要加载之前保存的地图。
+
+  ```c++
+  loadedAtlas = true;
+  if(createnewmap)
+  {
+      // do create new map
+      mpAtlas->CreateNewMap();
+  }
+  else
+  {
+      // cout<<mpAtlas->
+      // current map is none,so tracking will cause fault
+      vector<Map*> multiMap = mpAtlas->GetAllMaps();
+      cout<< multiMap.size();
+      // auto iter = multiMap.begin();
+      // mpAtlas->ChangeMap(*(iter));
+  }
+  ```
+
+- 在slam进行track的时候，调整trackmonocular时：
+
+  - 如果是`SLAM.TrackMonocular(gray,timestamp);`，会新建很多的map，但是在重定位的时候，可能导致重新track不上。如果重定位时不是保存的current map，那么需要进行地图更改，概率匹配不上。
+  - 如果是`SLAM.TrackMonocular(gray,0);`，那么就会新建一个map，然后将这个map保存，重定位直接设置这个map即可
+
+- 打开系统的重定位功能（即关闭建图线程）
+
+  ```
+  System::System(const string &strVocFile, const string &strSettingsFile, const eSensor sensor,bool useLocalization,bool createnewmap,
+                 const bool bUseViewer, const int initFr, const string &strSequence):
+      mSensor(sensor), mbReset(false), mbResetActiveMap(false),
+      mbActivateLocalizationMode(useLocalization), mbDeactivateLocalizationMode(false), mbShutDown(false)
+  ```
+
+  在实例化的时候，修改 `mbActivateLocalizationMode`
+
+### 建图
+
+在atlas文件中，修改保存的内存变量：
+
+需要多保存一个 `ar & mpCurrentMap`，那么在反序列化的时候，就会直接加载这个map
+
+```c++
+friend class boost::serialization::access;
+
+template<class Archive>
+void serialize(Archive &ar, const unsigned int version)
+{
+ar.template register_type<Pinhole>();
+ar.template register_type<KannalaBrandt8>();
+
+// Save/load a set structure, the set structure is broken in libboost 1.58 for ubuntu 16.04, a vector is serializated
+ar & mspMaps;
+ar & mvpBackupMaps;
+ar & mvpCameras;
+// Need to save/load the static Id from Frame, KeyFrame, MapPoint and Map
+ar & Map::nNextId;
+ar & Frame::nNextId;
+ar & KeyFrame::nNextId;
+ar & MapPoint::nNextId;
+ar & GeometricCamera::nNextId;
+ar & mnLastInitKFidMap;
+ar & mpCurrentMap;
+}
+```
+
+### 定位
+
+也就是在track线程中：在2037行的部分，需要修改：也就是把跟踪状态修改为`mState == RECENTLY_LOST && !bOK`时进行重定位
+
+```c++
+{
+// 114515
+// Localization Mode: Local Mapping is deactivated (TODO Not available in inertial mode)
+// if(mState==LOST){
+if (mState == RECENTLY_LOST && !bOK){
+// 
+//     if(mSensor == System::IMU_MONOCULAR || mSensor == System::IMU_STEREO || mSensor == System::IMU_RGBD)
+//         Verbose::PrintMess("IMU. State LOST", Verbose::VERBOSITY_NORMAL);
+//     bOK = Relocalization();
+// }
+// if (mState == RECENTLY_LOST || !bOK ) {
+if (mSensor == System::IMU_MONOCULAR || mSensor == System::IMU_STEREO || mSensor == System::IMU_RGBD)
+Verbose::PrintMess("IMU. State LOST", Verbose::VERBOSITY_NORMAL);
+bOK = Relocalization();
+}
+```
+
+
+
+### 修改setting.yaml文件
+
+```
+System.LoadAtlasFromFile: "/home/sophda/project/AtlasORBslam3/output/mapl"
+
+System.SaveAtlasToFile: "/home/sophda/project/AtlasORBslam3/output/mapl"
+```
+
+- 建图时，只保留saveatlas
+- 重定位时，只保留loadatlas

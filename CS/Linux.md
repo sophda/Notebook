@@ -1,3 +1,19 @@
+# WSL配置
+
+## 设置内存和swap
+
+在用户目录下新建**.wslconfig**
+
+```
+[wsl2]
+memory=20GB
+swap=20GB
+localhostForwarding=true
+
+```
+
+即可设置内存为20G，设置交换内存为20G
+
 # Linux
 
 ## 解压缩相关
