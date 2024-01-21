@@ -103,6 +103,45 @@ int main()
 
 
 
+## 获得目录所有文件
+
+- sortfun，根据传输的参数arg1，arg2进行排序，如果是<，则所有的从小到大排；如果是>，则从大到小排。
+
+```c++
+void GetFileNames(std::string path, std::vector<std::string> &filenames)
+{
+    DIR *pDir;
+    struct dirent* ptr;
+    if(!(pDir = opendir(path.c_str()))){
+        std::cout<<"Folder doesn't Exist!"<<std::endl;
+        return;
+    }
+    while((ptr = readdir(pDir))!=0) {
+        if (strcmp(ptr->d_name, ".") != 0 && strcmp(ptr->d_name, "..") != 0){
+            filenames.push_back(path + "/" + ptr->d_name);
+        }
+    }
+    closedir(pDir);
+}
+bool sortfun(string str1,string str2)
+{
+        return str1<str2;
+}
+
+int main()
+{
+        std::vector<std::string> file_name;
+        std::string path = "../rgbd/";
+        GetFileNames(path, file_name);
+
+        sort(file_name.begin(),file_name.end(),sortfun);
+        for(int i = 0; i <file_name.size(); i++)
+        {
+            std::cout<<file_name[i]<<std::endl;
+        }
+}
+```
+
 
 
 
@@ -2733,3 +2772,113 @@ int main()
 ```
 
 **说明**：在main函数中，要将保存序列化的部分放到`{}`中，这样做是保证在`{}`作用域执行完毕后，就可以调用archive的析构函数了，这样才能保证保存的数据没有问题。复习一下：一个类在`{}`中，在`{}`中的部分执行完后，会调用这个类的析构函数。因此unique_lock放在`{}`中，执行完后会执行析构，自动为这个mutex解锁。
+
+
+
+
+
+# PYTHON
+
+## 配置
+
+```
+find_package(PythonLibs REQUIRED)
+include_directories(${PYTHON_INCLUDE_DIRS})
+target_link_libraries(${PYTHON_LIBRARIES})
+```
+
+## 初始化
+
+- PyImport_ImportModule 获得对应的py文件
+
+```c++
+#include <Python.h>
+#include <numpy/arrayobject.h> 
+
+	Py_Initialize();
+	PyObject* sys = PyImport_ImportModule("sys");
+
+	PyRun_SimpleString("import sys"); // 执行 python 中的短语句  
+	PyRun_SimpleString("sys.path.append('../')");
+
+	PyObject *pModule(0);
+	pModule = PyImport_ImportModule("hdf5");//myModel:Python文件名
+
+	if(pModule){
+		cout<<"Python init"<<endl;
+	}
+```
+
+
+
+## 基础数据交互
+
+- PyModule_GetDict 获得py文件中**所有函数**，返回dict
+- PyDict_GetItemString  根据dict，以及**函数名**，获得对应的函数
+- Py_BuildValue 新建一个变量
+- PyObject_CallObject 传入变量，如果py没有输入，则为NULL/nullptr
+
+```c++
+PyObject *pDict = PyModule_GetDict(pModule);
+PyObject *pinit = PyDict_GetItemString(pDict,"init");
+PyObject *pgetimg = PyDict_GetItemString(pDict,"getimg");
+PyObject *arg = Py_BuildValue("(i)",10);
+PyObject_CallObject(pinit,arg);
+```
+
+```python
+import numpy as np
+import h5py
+import cv2
+import os
+filelist = []
+h5 = None
+def init(arg):
+    print("init")
+    # 很奇怪，这个和atlas是在一个路径里的
+    h5_path="../rgb/targetvideo_depth.h5"
+    save_dir='./'
+    global filelist
+    global h5
+    # print("0000")
+    h5 = h5py.File(h5_path, 'r')
+    os.makedirs(save_dir, exist_ok=True)
+    # filelist = h5.keys()
+    for key in h5.keys():
+        filelist.append(key)
+```
+
+
+
+## 传图片
+
+```c++
+PyObject *pgetimg = PyDict_GetItemString(pDict,"getimg");
+PyObject *arg = Py_BuildValue("(i)",10);
+PyObject *pyResult = PyObject_CallObject(pgetimg,arg);
+PyArrayObject *arr = (PyArrayObject *) pyResult;
+
+// // PyArrayObject *arr = (PyArrayObject *)np;
+// // Mat img = Mat::zeros(720,1280);
+cv::Mat  img =cv::Mat::zeros(cv::Size(1280,720),CV_16U);
+auto sz = cv::Size(1280,720);
+int x = sz.width;
+int y = sz.height;
+int z = 1;
+int size = x*y*z;
+
+memcpy((uchar*)img.data,arr->data,1280*720*2);
+cout<<img.at<ushort>(50,50)<<endl;
+```
+
+```python
+def getimg(id):
+    # print("getimg")
+    id = int(id)
+    key = filelist[id]
+    # print(key)
+    img = cv2.imdecode(np.array(h5[key]), -1)  # 解码
+    # print(size_of(img))
+    return img
+```
+
