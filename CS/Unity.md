@@ -914,6 +914,14 @@ public class TreeCtrl : MonoBehaviour
 
    ![image-20230714050633809](src/image-20230714050633809.png)
 
+## adb安装
+
+```
+adb install -t <test_only_apk_filename>.apk
+```
+
+
+
 ## Android11 强制存储分区
 
 由于Android11强制进行存储分区，所以使用c++ jni获取根目录下的文件需要“获得所有文件读取权”。

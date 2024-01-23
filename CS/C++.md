@@ -57,6 +57,22 @@ int main ()
 
 返回的是void类型，需要进行类型转换
 
+## 类型转换
+
+```c++
+#include <iostream>
+#include <string>
+
+int main ()
+{
+  int n = 123;
+  std::string str = std::to_string(n);
+  std::cout << n << " ==> " << str << std::endl;
+
+  return 0;
+}
+```
+
 
 
 # 文件
