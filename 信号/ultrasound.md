@@ -517,6 +517,24 @@ $$
 
 宽带IMN的各种方案已经被用于超声成像应用，可以获得宽带宽信号以获得良好的轴向分辨率
 
+传统的电压电流测量中，使用正弦信号来驱动传感器，然后换能器的电阻抗可以用电压/电流来确定，电压和电流可以在换能器的两端检测到。
+
+![image-20240222201654834](src/image-20240222201654834.png)
+
+![image-20240222201714395](src/image-20240222201714395.png)
+
+
+
+
+
+## 史密斯图
+
+
+
+
+
+
+
 # 自聚焦超声声场模拟
 
 > 目前广泛使用的聚焦方式：
@@ -915,3 +933,210 @@ PSF的主要特征包括：
 3. **主瓣形状**：PSF的主瓣形状可以是高斯型、兰伯特型或其他形状，这取决于超声系统的成像特性。
 
 在超声成像中，PSF对于评估成像系统的性能至关重要，因为它直接影响到图像的细节和对比度。在超分辨率成像技术中，目标是实现比传统超声成像更小的PSF，从而提供更清晰的图像。在文档中提到的研究中，通过使用2D稀疏阵列和超分辨率处理方法，研究者们成功地实现了比传统超声成像更小的PSF，从而提高了微血管结构的可视化质量。
+
+
+
+
+
+# k wave
+
+## python 安装
+
+创建一个虚拟环境，安装kwave
+
+```
+pip install k-wave-python
+```
+
+## 输入结构
+
+### kgrid
+
+定义了计算格点的属性，格点是为了便于模拟。将连续的介质空间离散化的产物，kgrid将连续介质均匀分成一个个格点。
+
+```
+% create computational grid for a 2D simulation
+kgrid = makeGrid(Nx, dx, Ny, dy);
+```
+
+**其中Nx、Ny是对应维度上网格点的数量，dx、dy是网格点的空间尺寸**，则 kgrid 在x方向上的实际尺寸应为kgrid.x_size = kgrid.Nx * kgrid.dx。
+
+需要注意的是，生成的kgrid中默认包含一个PML（perfectly matched layer）层，该层位于网格点的内部边界，声波传播到PML层时会被全部吸收。二维的kgrid中PML层宽度为20个网格点，三维为10个网格点，模拟时注意不要将声源或是传感器放置在PML层内，否则会发生难以解释的现象。也可以在模拟时通过将 ‘PMLInside’ 选项设置为 false 来使PML层位于网格点外部，这样就可以不用考虑边界问题了。
+在 kWaveGrid 对象被创建后，唯一可以调整的参数只剩下**kgrid.t_array，它描述的是模拟的时间值数组，在不指定的情况下会自动设置。默认情况下，模拟的总时长为声波以最小声速穿过最长网格对角线所需的时间**，而时间步长基于CFL数（默认为0.3）和介质的最大声速，公式为kgrid.dt = CFL*dx_min/c0_max。
+
+### medium
+
+medium定义了每一个网格点处的介质属性。可以被定义的参数共有五个，分别是等熵声速（sound_speed）、环境质量密度（density）、非线性参数（BonA）、幂律吸收系数或前因数（alpha_coeff）和幂律吸收指数（alpha_power）
+
+除了 alpha_power 参数必须是一个标量外，其余属性既可以是标量（介质为均匀同质时）也可以是矩阵（介质为非同质或不均匀时）
+
+### source
+
+source 结构定义了介质中的声源，k-Wave中共有三种可以使用的声源
+
+- 第一种是初始声压分布，即在仿真开始前在网格中某个区域设置一个初始声压脉冲，使用预设函数可以很方便地画一些几何图形，比如二维网格中可以用 makeDisc 画实心圆，makeCircle 画圆圈，三维网格中则为 makeBall 和 makeSphere。以下代码在三维网格中定义了一个球形的初始声压。
+
+  ```
+  % define an initial pressure distribution using makeBall
+  source.p0 = makeBall(Nx, Ny, Nz, Nx/2, Ny/2, Nz/2, radius);
+  
+  ```
+
+  
+
+- 第二种是声压随时间变化的声源。该类型声源需要两个输入参数，一是声源的网格点位置，二是声源声压随时间变化的函数。声源的网格点位置使用二值的矩阵来表示（1表示声源点，0表示非声源点），该矩阵应与kgrid具有相同的尺寸，保存在 source.p_mask 中。输入信号可以为一维数组（长度为kgrid.Nt，记录每个时间点的声压强度，并被所有的声源点使用），也可以为二维矩阵（分别设置每一个声源的声压，每一列为一个声源的声压）。
+
+- 第三种声源按我个人的理解是在第二种声源的基础上，可以定义不同方向的声压强度。利用source.u_mask定义声源的网格点位置，然后用source.ux，source.uy 和 source.uz 定义不同方向的声压强度
+
+  ```
+  % define the source mask to be a line across the top of the grid
+  source.u_mask = zeros(Nx, Ny);
+  source.u_mask(1, :) = 1;
+  
+  ```
+
+  
+
+### sensor
+
+sensor 定义了传感器相关的属性，仿真时，传感器会记录该处在每一个时间点的声压强度。传感器在网格点中的位置使用 sensor.mask 来定义（需要与 kgrid 尺寸相同），以下是一些示例。
+
+```
+% define a 2D binary sensor mask in the shape of a line
+x_offset = 25; % [grid points]
+width = 50; % [grid points]
+sensor.mask = zeros(Nx, Ny);
+sensor.mask(x_offset, Ny/2 - width/2 + 1:Ny/2 + width/2) = 1;
+
+% define a 2D binary sensor mask in the shape of an arc using makeCircle
+x_pos = Nx/2; % [grid points]
+y_pos = Ny/2; % [grid points]
+radius = 20; % [grid points]
+arc_angle = pi/2; % [radians]
+sensor.mask = makeCircle(Nx, Ny, x_pos, y_pos, radius, arc_angle);
+```
+
+也可以用坐标的方法来定义，默认与 kgrid 尺寸相同。
+
+## python example
+
+仿真任意位置的阵元
+
+**参数定义：**
+
+```
+    c0 = 1500  // 声速 m/s
+    rho0 = 1000  // 水的密度
+    source_f0 = 1e6
+    source_amp = 1e6
+    source_cycles = 5
+    source_focus = 15e-3
+    element_num = 10   // 阵元数
+    element_width = 1e-3  // 阵元宽 m
+    element_length = 1e-3 // 阵元长 m
+    element_pitch = 2e-3  // pitch
+    translation = kwave.data.Vector([5e-3, 0, 8e-3])  // 确定阵列位置
+    rotation = kwave.data.Vector([0, 20, 0])  // 确定阵列的旋转
+    rotation_0 = kwave.data.Vector([0,0,0])  //
+    grid_size_x = 40e-3    // 划分网格 x上尺寸
+    grid_size_y = 20e-3    // 同上
+    grid_size_z = 40e-3    // 同上
+    ppw = 3
+    t_end = 30e-6          // 仿真结束时间
+    cfl = 0.5
+```
+
+**网格参数定义：**
+
+```
+    # GRID
+    dx = c0 / (ppw * source_f0) // 0.0005
+    Nx = round(grid_size_x / dx) // 80
+    Ny = round(grid_size_y / dx) // 40
+    Nz = round(grid_size_z / dx) // 80
+    kgrid = kWaveGrid([Nx, Ny, Nz], [dx, dx, dx])
+    kgrid.makeTime(c0, cfl, t_end)
+```
+
+- dx为网格的步长，也就是一个网格的大小
+
+- Nx,Ny,Nz为三维网格的网格数
+
+- kgrid为网格变量
+
+  ![image-20240224111638541](src/image-20240224111638541.png)
+
+**源定义，也就是声源：**
+
+我焯，原！
+
+```
+   # SOURCE
+    if element_num % 2 != 0:
+        ids = np.arange(1, element_num + 1) - np.ceil(element_num / 2)
+    else:
+        ids = np.arange(1, element_num + 1) - (element_num + 1) / 2
+
+    time_delays = -(np.sqrt((ids * element_pitch) ** 2 + source_focus ** 2) - source_focus) / c0
+    time_delays = time_delays - min(time_delays)
+
+    source_sig = source_amp * tone_burst(1 / kgrid.dt, source_f0, source_cycles,
+                                         signal_offset=np.round(time_delays*0 / kgrid.dt).astype(int))
+    karray = kWaveArray(bli_tolerance=0.05, upsampling_rate=10)
+
+    for ind in range(element_num):
+        x_pos = 0 - (element_num * element_pitch / 2 - element_pitch / 2) + ind * element_pitch
+        karray.add_rect_element([x_pos, 0, kgrid.z_vec[0][0]], element_width, element_length, rotation)
+
+    karray.set_array_position(translation, rotation)
+    source = kSource()
+    source.p_mask = karray.get_array_binary_mask(kgrid)
+    # voxel_plot(np.single(source.p_mask))
+    source.p = karray.get_distributed_source_signal(kgrid, source_sig)
+```
+
+- time_delays表示每个阵元的时间延迟，通过聚焦点与阵元的位置计算
+
+- source_sig表示每个阵元施加的激励脉冲，使用`signal_offset`表示每个阵元的延迟。
+
+- karray，实例化一个KWaveArray的类
+
+- for循环表示将**阵元添加到karray对象中**
+
+- karray.set_array_position，设置**整个阵列**的位置和旋转
+
+- source，实例化一个KSource对象，表示为阵元施加的激励源，需要指定`kgrid`以及信号`source_sig`
+
+- source.p_mask，表示变压力源的二进制位置矩阵，其大小取决于`kgrid`，每一个元素为bool型.。
+
+  **0为非声源点，1为声源点**。由于是跟kgrid同步的，所以是一个三维数据。
+
+  ![image-20240224111735154](src/image-20240224111735154.png)
+
+  如下图所示，在pmask[12]的地方，有很多声源点。
+
+  ![image-20240224114749504](src/image-20240224114749504.png)
+
+- source.p 对于`source.p_mask`给出的声源点，给出**随时间变化的压力值**。这里由`source_sig`负责指定（就是那个计算激励延迟的变量，这里就要负责声源的变化啦~）
+
+  然后！我们先看`source.p_mask`中的非零点，也就是**声源点的数量**：
+
+  ![image-20240224115600658](src/image-20240224115600658.png)
+
+  一共有9918个点。
+
+  然后再看`source.p`葫芦里卖的什么药：
+
+  ![image-20240224115729444](src/image-20240224115729444.png)
+
+  很明显，这是一个高9918（从0开始的），长31的数组，那么**每一行表示这个声源的声压变化情况**
+
+
+
+**介质参数定义：**
+
+```
+    medium = kWaveMedium(sound_speed=c0, density=rho0)
+```
+
+**传感器参数定义，也就是测量点：**
