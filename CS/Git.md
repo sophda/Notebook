@@ -60,6 +60,17 @@ git remote add origin <仓库连接>
 git push origin master
 ```
 
+## 用户配置
+
+主要是gitee这个网站是根据邮箱地址来给你参与仓库贡献的，所以说，你本地的邮箱地址和gitee端的邮箱地址不同的话，是会导致你一个仓库中有两个人贡献的。所以最好是把本地的邮箱地址改过来。
+
+```
+git config --global user.email 修改后的邮箱
+git config --global --replace-all user.email 你的邮箱
+```
+
+
+
 ## 远程提交分支
 
 ```
