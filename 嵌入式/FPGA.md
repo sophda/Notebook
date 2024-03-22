@@ -1,6 +1,6 @@
 
 
-# Basic
+# Software Basic
 
 ## 界面
 
@@ -56,6 +56,133 @@
 
 ### v代码
 
+```verilog
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date: 2024/03/22 22:30:18
+// Design Name: 
+// Module Name: led_flash
+// Project Name: 
+// Target Devices: 
+// Tool Versions: 
+// Description: 
+// 
+// Dependencies: 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
+
+
+module led_flash(
+input wire clk,
+input wire rst_n,
+output reg [1:0] led
+    );
+
+
+reg [27:0] cnt;
+
+wire add_cnt ;
+wire end_cnt ;
+
+always @(posedge clk or negedge rst_n)begin
+    if (rst_n==1'b0)begin
+        cnt<='d0;
+    end
+    else if (add_cnt)begin
+        if (end_cnt)
+            cnt<='d0;
+        else
+            cnt<=cnt+1'b1;
+        
+    end
+end
+
+assign add_cnt = 1;
+assign end_out = add_cnt && cnt ==10_000_000 -1;
+
+
+always @(posedge clk or negedge rst_n)begin
+    if(rst_n==1'b0)begin
+        led<=2'b10;
+    end
+    else if(end_cnt)begin
+        led<={led[0],led[1]};
+    end
+    else begin
+        led<=led;
+    end
+end
+
+endmodule
+
+
+```
+
 
 
 ### 管脚约束
+
+```
+create_clock -period 20.000 [get_ports clk]
+set_property PACKAGE_PIN N18 [get_ports clk]
+
+set_property IOSTANDARD LVCMOS33 [get_ports clk]
+############## key define##################
+set_property PACKAGE_PIN P16 [get_ports rst_n]
+set_property IOSTANDARD LVCMOS33 [get_ports rst_n]
+##############LED define##################
+set_property PACKAGE_PIN P15 [get_ports {led[0]}]
+set_property PACKAGE_PIN U12 [get_ports {led[1]}]
+set_property IOSTANDARD LVCMOS33 [get_ports rst_n]
+set_property IOSTANDARD LVCMOS33 [get_ports {led[*]}]
+set_property IOSTANDARD LVCMOS33 [get_ports clk]
+```
+
+
+
+# Verilog语法
+
+## 模块
+
+FPGA中是以模块为基础的，每一个**可综合**的.v文件都是一个模块，由module-endmodule来声明，在这两个关键字内部，完成模块的功能。如下：与门。
+
+![image-20240323000109857](src/image-20240323000109857.png)
+
+
+
+## 变量类型
+
+### 常量
+
+常量分为整形、实数型、字符串型、参数四类
+
+整形：二进制（b，B）、十进制（d，D）、十六进制（h，H）、八进制（o，O）
+
+表示方法：
+
+- <位宽>'<进制><数字>
+
+  如：`2'b10`表示二位二进制数。
+
+- ~
+
+
+
+### wire
+
+wire型变量在物理结构上只是一根线，使用assign对线进行赋值。
+
+
+
+### reg
+
+reg型变量左边有一个输入端口D，右端有一个输出端口Q，并且reg型存储数据需要在clk时钟控制下完成。**clk也就是方波**，由晶振产生，是我们描述数字电路最基本的时间单元，周期固定，占空比为50%。
+
+![image-20240323001252682](src/image-20240323001252682.png)
