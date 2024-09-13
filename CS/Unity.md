@@ -6,6 +6,12 @@
 
 在edit->preference中制定好vsc的路径，然后打开vsc，安装c#插件。如果想有代码提示，还需要安装.net框架，这部分按照vsc的提示来就好，在安装完成之后需要重新启动下windows。
 
+```
+"$(ProjectPath)" -g "$(File)":$(Line):$(Column)
+```
+
+
+
 > 如果还不行，可以使用下面的：把两项勾上
 >
 > ![image-20230713194349397](src/image-20230713194349397.png)
