@@ -356,3 +356,242 @@ with open("/home/sophda/torch/Model/minist.pte", "wb") as file:
 
 
 ## 运行模型
+
+
+
+
+
+# libtorch交叉编译
+
+## 编译libtorch
+
+```
+cd /home/sophda/libtorch/pytorch/arm64build
+# rm -rf ./*
+cmake \
+    -DCMAKE_TOOLCHAIN_FILE=${NDK27}/build/cmake/android.toolchain.cmake \
+    -DANDROID_PLATFORM=android-30 \
+	-DANDROID_ABI="arm64-v8a" \
+    -DUSE_VULKAN=OFF \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DUSE_MKLDNN=OFF \
+    -DUSE_QNNPACK=OFF \
+    -DUSE_PYTORCH_QNNPACK=ON \
+    -DBUILD_TEST=OFF \
+    -DUSE_NNPACK=OFF \
+    -DUSE_CUDA=OFF \
+    -DBUILD_PYTHON:BOOL=OFF \
+    -DBUILD_SHARED_LIBS:BOOL=OFF \
+    -DUSE_NNPACK=ON \
+    -DUSE_OPENMP=OFF \
+    ..
+
+make -j12
+
+```
+
+## 链接
+
+如上文所示，是编译生成的静态库，所以后面调用的时候需要将静态库添加到可执行文件中
+
+- main文件
+
+  ```
+  #include <iostream>
+  #include <torch/torch.h>
+  int main(int, char**){
+      std::cout << "Hello, from mobile!\n";
+      torch::Tensor a = torch::rand({2,3});
+      
+      std::cout << a <<std::endl;
+  }
+  
+  ```
+
+- cmake
+
+  ```
+  cmake_minimum_required(VERSION 3.5.0)
+  
+  project(mobile VERSION 0.1.0 LANGUAGES C CXX)
+  # set(name mobile)
+  
+  include_directories(
+    /home/sophda/libtorch/x64/libtorch/include
+    /home/sophda/libtorch/x64/libtorch/include/torch/csrc/api/include
+  )
+  
+  set(fbjni_DIR /home/sophda/libtorch/third-party/fbjni)
+  set(fbjni_BUILD_DIR /home/sophda/libtorch/third-party/fbjni/build)
+  add_subdirectory(${fbjni_DIR} ${fbjni_BUILD_DIR})
+  
+  # add_library(fbjni STATIC IMPORTED)
+  # set_property(
+  #     TARGET fbjni
+  #     PROPERTY IMPORTED_LOCATION
+  #     /home/sophda/libtorch/third-party/fbjni/build/libfbjni.a)
+  
+  #########################################################################
+  function(import_static_lib name)
+  add_library(${name} STATIC IMPORTED)
+  set_property(
+      TARGET ${name}
+      PROPERTY IMPORTED_LOCATION
+      /home/sophda/libtorch/pytorch/arm64build/lib/${name}.a)
+  endfunction(import_static_lib)
+  
+  
+  import_static_lib(libtorch)
+  import_static_lib(libtorch_cpu)
+  import_static_lib(libc10)
+  import_static_lib(libnnpack)
+  import_static_lib(libXNNPACK)
+  import_static_lib(libpthreadpool)
+  import_static_lib(libeigen_blas)
+  import_static_lib(libcpuinfo)
+  import_static_lib(libclog)
+  import_static_lib(libpytorch_qnnpack)
+  
+  
+  # Link most things statically on Android.
+  set(pytorch_LIBS
+    fbjni
+    -Wl,--gc-sections
+    -Wl,--whole-archive
+    libtorch
+    libtorch_cpu
+    -Wl,--no-whole-archive
+    libc10
+    libXNNPACK
+    libpthreadpool
+    libeigen_blas
+    libcpuinfo
+    libclog
+    libpytorch_qnnpack
+    libnnpack
+    # openmp
+  
+  )
+  
+  add_executable(mobile main.cpp)
+  target_link_libraries(mobile ${pytorch_LIBS})
+  
+  ```
+
+- 构建脚本
+
+  ```
+  cd /home/sophda/libtorch/mobile/armbuild
+  rm -rf ./*
+  cmake \
+      -DCMAKE_TOOLCHAIN_FILE=${NDK27}/build/cmake/android.toolchain.cmake \
+      -DANDROID_PLATFORM=android-30 \
+  	-DANDROID_ABI="arm64-v8a" \
+      ..
+  
+  make -j12
+  ```
+
+# libtorch  api
+
+
+# JNI
+
+呃按道理说，安卓也是边缘设备不是？所以也算边缘计算~
+
+## kotlin与jni交互
+
+
+
+# deploy GPT2 
+
+## 使用python导出为jit权重
+
+```python
+import json
+import numpy as np
+import os
+import urllib.request
+
+# import requests
+import tiktoken
+import torch
+from tqdm import tqdm
+from model import GPTModel
+def testTrace():
+    model = torch.jit.load("./gpt2.jit")
+    tokenids = torch.tensor([[31373]])
+    output = model(tokenids)
+    print(output)
+    return
+
+
+def saveTraced():
+    CHOOSE_MODEL = "gpt2-small (124M)"
+    INPUT_PROMPT = "hello,world"
+
+    BASE_CONFIG = {
+        "vocab_size": 50257,     # Vocabulary size
+        "context_length": 1024,  # Context length
+        "drop_rate": 0.0,        # Dropout rate
+        "qkv_bias": True         # Query-key-value  
+    }
+
+    model_configs = {
+        "gpt2-small (124M)": {"emb_dim": 768, "n_layers": 12, "n_heads": 12},
+        "gpt2-medium (355M)": {"emb_dim": 1024, "n_layers": 24, "n_heads": 16},
+        "gpt2-large (774M)": {"emb_dim": 1280, "n_layers": 36, "n_heads": 20},
+        "gpt2-xl (1558M)": {"emb_dim": 1600, "n_layers": 48, "n_heads": 25},
+    }
+
+    model_size = CHOOSE_MODEL.split(" ")[-1].lstrip("(").rstrip(")")
+
+    BASE_CONFIG.update(model_configs[CHOOSE_MODEL])
+
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    gpt = GPTModel(BASE_CONFIG)
+    # torch.save(gpt.state_dict(),'./gpt2.pth')
+    gpt.load_state_dict(torch.load("./gpt2.pth",weights_only = True,map_location = "cpu"))
+    # gpt.to(device)
+    gpt.eval()
+    tokenids = torch.tensor([[31373,    11,  6894,  4421]])
+    output = gpt(tokenids)
+    print(output)
+    traced = torch.jit.trace(gpt,tokenids)
+    traced.save("./gpt2.jit")
+
+# saveTraced()
+testTrace()
+```
+
+## libtorch加载权重、推理
+
+加载权重并进行推理
+
+```cpp
+  int ids[] = {31373,11,6897};
+  torch::Tensor ids_tensor = torch::from_blob(
+    ids,
+    {1,4}
+  );
+  std::vector<torch::jit::IValue> inputs;
+  inputs.push_back(ids_tensor.to(torch::kLong));
+  torch::jit::Module model = torch::jit::load("/home/sophda/libtorch/GPT2/model_py/gpt2.jit");
+  // return 0;
+  torch::NoGradGuard no_grad;
+
+  auto out = model.forward(inputs).toTensor();
+```
+
+如果不把ids_tensor转换为kLong的话， 这样子的话会遇到：
+
+```
+RuntimeError: Expected tensor for argument #1 'indices' to have one of the following scalar types: Long, Int; but got CPUFloatType instead (while checking arguments for embedding)
+```
+
+这种问题，也就是保存的模型和输入的模型权重不匹配，于是需要将输入的types修改为Long或者Int类型的：即加上.to()
+
+**需要新建一个inputs的vector，然后将需要输入的tensor push进去，但是放到vector里面并不是升维度，里面是啥推理的就是啥**
+
