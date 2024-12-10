@@ -501,9 +501,91 @@ make -j12
 
 ## kotlin与jni交互
 
+**c++端：**
+
+命名标准：
+
+```
+Java_com_example_chat_lib_gpt2_init(JNIEnv * env, jobject obj)
+```
+
+分别是：
+
+- Java
+
+- com_example_chat_lib：表示路径
+
+  ![image-20241210153106963](src/image-20241210153106963.png)
+
+- gpt2：类名
+
+- init：c++中的函数
+
+- (JNIEnv * env, jobject obj) 这两个都要有，不管有没有参数
+
+```c++
+#include "gpt2.hpp"
+#include <iostream>
+#include <memory>
+#include <android/log.h>
+#include <jni.h>
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_example_chat_lib_gpt2_init(JNIEnv * env, jobject obj)
+{
+    LOGI("gpt2init");
+    gpt2 = std::make_shared<GPT2>(
+        "/storage/emulated/0/gpt2/encoder.json",
+        "/storage/emulated/0/gpt2/vocab.txt",
+        "/storage/emulated/0/gpt2/gpt2.jit"
+    );
+    return 0;
+
+}
+
+extern "C"
+JNIEXPORT jstring JNICALL
+Java_com_example_chat_lib_gpt2_getreply(JNIEnv * env,jobject obj, jstring input)
+{
+    // *output = *input + "c++你好";
+    const char *input_char = env->GetStringUTFChars(input,NULL);
+    std::string input_str = input_char;
+    // std::string output;
+    std::string output = gpt2->process(input_str);
+    // std::string output = "123.";
+
+    // std::string in = "";
+    return env->NewStringUTF(output.c_str());
+}
+
+```
+
+**kotlin端：**
+
+```kotlin
+package com.example.chat.lib
+
+class gpt2 {
+    companion object{
+        init {
+            System.loadLibrary("gpt2mobile")
+        }
+    }
+    external fun getreply(input: String) : String
+    external fun init() : Int
 
 
-# deploy GPT2 
+    fun test(input: Int):Int
+    {
+        return 7;
+    }
+}
+```
+
+
+
+# deploy GPT2 (libtorch)
 
 ## 使用python导出为jit权重
 
@@ -594,4 +676,36 @@ RuntimeError: Expected tensor for argument #1 'indices' to have one of the follo
 这种问题，也就是保存的模型和输入的模型权重不匹配，于是需要将输入的types修改为Long或者Int类型的：即加上.to()
 
 **需要新建一个inputs的vector，然后将需要输入的tensor push进去，但是放到vector里面并不是升维度，里面是啥推理的就是啥**
+
+
+
+
+
+## 推理并输出结果
+
+```c++
+auto output = model.forward(input_vec).toTensor();
+// std::cout<<output.shape()<<std::endl;
+
+torch::Tensor sliced = output.index({Slice(0,None),-1,Slice(0,None)});
+torch::Tensor max = torch::argmax(sliced,-1);
+int new_token_id = max.item().toInt();
+```
+
+1.输出的output结果，需要对其进行索引，具体的**索引方法**如下：
+
+> 前提：使用`using namespace torch::indexing`
+
+![image-20241210151853067](src/image-20241210151853067.png)
+
+如果是对tensor进行**赋值操作**，如下：
+
+![image-20241210152003532](src/image-20241210152003532.png)
+
+2.输出的结果需要取argmax得到维度上的最大值，也就是最大的那个token id，需要将argmax得到的tensor转换为int类型
+
+```c++
+torch::Tensor max = torch::argmax(sliced,-1);
+int new_token_id = max.item().toInt();
+```
 
