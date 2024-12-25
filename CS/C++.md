@@ -1526,7 +1526,7 @@ int main()
 	
 	Player* p = new Player("hello");
 	printName(p);
-// 因为root类实用virtual,所以子类会对GetName()方法进行改  // 写。printName(e)会打印entity
+// 因为root类实用virtual,所以子类会对GetName()方法进行改写。printName(e)会打印entity
 // printname(p)会打印hello
 
 }
@@ -2391,6 +2391,75 @@ unique_lock是一个类，其中管理了一个私有变量，在初始化的过
 
 
 ## std::pair
+
+
+
+
+
+## std::move
+
+### 1. **基本原理**
+
+在 C++ 中，移动语义允许对象的资源所有权（例如动态分配的内存）从一个对象转移到另一个对象，而不是像复制构造函数那样创建资源的副本。这样做可以显著提高性能，尤其是在处理大型数据结构或需要频繁分配和释放资源的场景下。
+
+### 2. **`std::move` 的作用**
+
+- **右值引用**: C++ 引入了右值引用（`T&&`）的概念，允许我们通过“移动”而非“复制”来处理资源。`std::move` 通过将一个左值转换为右值引用，启用了移动语义。
+- **不进行深拷贝**: 通过使用 `std::move`，对象的资源所有权可以被转移，通常不会发生额外的深拷贝操作，从而提升性能。
+
+### **3.  如何使用 `std::move`**
+
+```c++
+#include <iostream>
+#include <vector>
+
+class MyClass {
+public:
+    MyClass() { std::cout << "Constructor\n"; }
+    MyClass(const MyClass& other) { std::cout << "Copy constructor\n"; }
+    MyClass(MyClass&& other) noexcept { std::cout << "Move constructor\n"; }
+    ~MyClass() { std::cout << "Destructor\n"; }
+};
+
+int main() {
+    MyClass a;
+    MyClass b = std::move(a);  // Move constructor
+}
+
+```
+
+在上面的例子中，`std::move(a)` 将 `a` 转换为右值引用，启用了 `MyClass` 的移动构造函数。这样，`b` 将“接管”`a` 的资源，而不是进行复制。
+
+### 4. **使用场景**
+
+- **容器类的元素转移**: 在使用 `std::vector` 或 `std::string` 等标准容器时，移动语义能够提高性能，避免不必要的拷贝。例如，向容器中插入或返回对象时，`std::move` 可以减少不必要的复制。
+
+```
+std::vector<MyClass> vec;
+MyClass obj;
+vec.push_back(std::move(obj));  // 使用移动语义
+
+```
+
+- **返回大型对象时**: 当函数返回一个大型对象时，`std::move` 可以避免创建副本。
+
+```
+MyClass createObject() {
+    MyClass obj;
+    // Do something with obj
+    return obj;  // Move instead of copy
+}
+
+MyClass obj2 = createObject();  // Move constructor
+
+```
+
+### 5. **注意事项**
+
+- **不可重复使用的资源**: 移动后，**源对象的状态是未定义的（通常为空或处于某种有效但未指定的状态）**，因此不能再对其执行操作。尽管如此，源对象仍然可以安全地被销毁。
+- **必须显式调用 `std::move`**: `std::move` 是一个类型转换操作，它不会自动执行“移动”。也就是说，在你希望启用移动语义时，必须显式调用 `std::move`。
+
+
 
 
 
