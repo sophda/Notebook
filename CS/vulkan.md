@@ -53,3 +53,53 @@ echo '{
 }' | sudo tee /etc/vulkan/icd.d/mali.json
 ```
 
+
+
+# compute shader
+
+## 先火急火燎的上手
+
+```
+git clone https://github.com/Erkaman/vulkan_minimal_compute.git
+```
+
+首先下载这个仓库，然后进行修改。
+
+这个仓库是通过compute shader进行分型，然后将图片保存到本地。
+
+---
+
+这个仓库本身没有什么要更改的，但是为了走一遍流程，通过在cmake中设置glsl，然后编译下*.comp文件为.spv，然后通过c++去调用这个spv文件，就可以执行vulkan compute shader了
+
+---
+
+```cmake
+# compile comp -> spv
+add_custom_command(
+    OUTPUT comp.spv
+    # MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/sum.glsl"
+    COMMAND glslc
+          -fshader-stage=comp ${CMAKE_CURRENT_SOURCE_DIR}/shaders/shader.comp
+          -o ${CMAKE_CURRENT_SOURCE_DIR}/shaders/comp.spv
+)
+
+add_custom_target(
+    shaders ALL
+    DEPENDS comp.spv
+)
+```
+
+编译spv主要是通过这段代码实现，主要是通过cmake执行命令，通过glslc工具将comp文件编译为spv文件，然后将文件名输入到c++的调用端实现调用。 
+
+```c++
+uint32_t* code = readFile(filelength, "../shaders/comp.spv");
+VkShaderModuleCreateInfo createInfo = {};
+createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+createInfo.pCode = code;
+createInfo.codeSize = filelength;
+```
+
+这样就可以实现调用了，是不是很简单呢~
+
+---
+

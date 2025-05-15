@@ -608,6 +608,8 @@ const int& c = add(1, 2); // 合法：const 左值引用可以绑定到右值（
 int&& d = add(1, 2);  // 合法：右值引用可以绑定到右值
 ```
 
+---
+
 
 
 要注意一种**不可行的情况**：
@@ -620,6 +622,29 @@ int& add(int a, int b) {
 ```
 
 这样子是返回的c的引用，但是当add执行完之后，会释放c的内存空间，导致**悬垂引用**
+
+这时无论怎么延长生命周期也不管用：
+
+```c++
+const int & a = add(5,6);
+```
+
+因为函数中的a，b都是临时变量。
+
+---
+
+```c++
+int& add(int & a, int b) {
+    a = a + b;  // c 是局部变量，函数结束后会被销毁
+    return a;        // 返回 c 的引用（错误！）
+}
+
+    int c= 15;
+    int &a = add(c,6);
+    printf("%d",a);
+```
+
+这种情况倒是可以的。
 
 # 6.函数
 
@@ -848,6 +873,12 @@ void main()
 
 
 
+
+
+
+
+
+
 # 7.类
 
 ## 定义
@@ -987,6 +1018,22 @@ int main()
             
 ```
 
+
+
+## protected、public、private
+
+有public, protected, private三种继承方式，它们相应地改变了基类成员的访问属性。
+
+**1.public继承：**基类public成员，protected成员，private成员的访问属性在派生类中分别变成：public, protected, private
+
+**2.protected继承：**基类public成员，protected成员，private成员的访问属性在派生类中分别变成：protected, protected, private
+
+**3.private继承：**基类public成员，protected成员，private成员的访问属性在派生类中分别变成：private, private, private
+
+
+
+
+
 ## 构造函数
 
 1. 有参构造
@@ -1009,6 +1056,43 @@ int main()
 
    - const:表明传入进来的值是不变的
    - 声明的是一个引用，如果是Person(Person p)的话，那么如果执行构造的话，如：Person p1; Person a(p1); 形参会先生成一个p的对象，然后将p1赋值给p，但是这个时候又会调用p对象的拷贝构造函数，这样就会一直迭代下去。
+
+
+
+## 函数传参
+
+函数传参默认的是**拷贝语义**，也就是在传参的时候，会生成一个临时变量。
+
+```c++
+class B {};
+
+B func_a(B b){
+    return b;
+}
+// 这里在函数传参的时候，拷贝语义，执行了 B b = 传入进来的b; 执行了B的拷贝构造函数
+// 在函数返回的时候，同样将b拷贝给一个临时变量，B 返回b = b，再执行一次B的拷贝构造
+
+
+B func_a(){
+    B b;
+    return b; //类构造在函数内部，编译器可以直接构造b到调用处，避免拷贝
+}
+// 区别于上面的，当类的实例化写在函数里面时，会执行“构造函数”，在返回的时候，由于编译器优化，即“编译器优化返回值RVO”，直接将b构造到拷贝处，避免了返回值的临时对象构造。
+
+
+
+B fun_b(B &b){
+    return b;
+}
+// 函数传参时拷贝语义，那么在传参时会执行：B &b = 传进来的b;也就是仅仅定义了一个引用值，没有执行 对象的拷贝。这里参考一下类的拷贝构造定义，形参也是一个引用，也就是无法触发拷贝构造，进而避免死循环
+
+B& fun_c(){}
+// 尽量避免，返回的引用要是没有const延长变量生命周期，会造成悬垂引用
+```
+
+
+
+
 
 ## ::
 
@@ -1450,6 +1534,25 @@ public:
 # 8.虚函数与内存模型
 
 ## 虚函数
+
+- 虚函数必须要提供实现，子类选择性重写
+- 纯虚函数不需要提供实现，强制子类重写
+
+
+
+virtual关键词表示这个类的派生类可以 **重写** 这个函数，那么在派生类中重写的时候可以加也可以不加virtual关键词，主要看这个类的派生类需不需要重写
+
+---
+
+基类的虚函数如果有定义，在子类中可以选择覆盖或者不动，如果不动也可以使用基类的虚函数。
+
+![image-20250504002708502](src/image-20250504002708502.png)
+
+
+
+---
+
+
 
 1. 例子
 
@@ -2165,7 +2268,262 @@ void main()
 
 运算符重载（operator overloading）允许为类定义的对象定义自定义行为，这样就可以使用常规运算符来执行自定义类的操作。
 
+在 C++ 中，运算符重载（Operator Overloading）允许为自定义类型赋予运算符的特定行为。以下是运算符重载的核心规则、分类及示例：
 
+---
+
+### 一、基本规则
+1. **可重载的运算符**  
+   C++ 允许重载大部分运算符（如 `+`, `==`, `<<`, `[]`, `()` 等），但以下运算符**不可重载**：
+   - `::`（作用域解析）
+   - `.*`（成员指针访问）
+   - `.`（成员访问）
+   - `?:`（三目运算符）
+   - `sizeof`、`typeid` 等编译时操作符
+
+2. **重载形式**  
+   - **成员函数**：运算符的左操作数是当前类对象（如 `obj + 5`）。
+   - **非成员函数**（通常为友元函数）：运算符的左操作数非当前类对象（如 `5 + obj`）。
+
+3. **参数数量**  
+   - 一元运算符（如 `++`、`!`）接受 0 个参数（成员函数）或 1 个参数（非成员函数）。
+   - 二元运算符（如 `+`、`==`）接受 1 个参数（成员函数）或 2 个参数（非成员函数）。
+
+---
+
+### 二、常见运算符重载示例
+#### 1. 算术运算符（`+`, `-`, `*`, `/`）
+```cpp
+class Vector {
+public:
+    int x, y;
+
+    // 成员函数形式：实现 obj1 + obj2
+    Vector operator+(const Vector& other) const {
+        return {x + other.x, y + other.y};
+    }
+
+    // 友元函数形式：实现 5 * obj
+    friend Vector operator*(int scalar, const Vector& v) {
+        return {scalar * v.x, scalar * v.y};
+    }
+};
+
+// 使用：
+Vector v1{1, 2}, v2{3, 4};
+Vector v3 = v1 + v2;       // 成员函数调用
+Vector v4 = 2 * v1;        // 友元函数调用
+```
+
+#### 2. 比较运算符（`==`, `!=`, `<`）
+```cpp
+class Date {
+public:
+    int year, month, day;
+
+    bool operator==(const Date& other) const {
+        return year == other.year && month == other.month && day == other.day;
+    }
+
+    bool operator<(const Date& other) const {
+        if (year != other.year) return year < other.year;
+        if (month != other.month) return month < other.month;
+        return day < other.day;
+    }
+};
+
+// 使用：
+Date d1{2023, 10, 1}, d2{2023, 10, 2};
+if (d1 < d2) { /* ... */ }
+```
+
+#### 3. 输入/输出运算符（`<<`, `>>`）
+```cpp
+#include <iostream>
+class Student {
+public:
+    std::string name;
+    int age;
+
+    friend std::ostream& operator<<(std::ostream& os, const Student& s) {
+        os << "Name: " << s.name << ", Age: " << s.age;
+        return os;
+    }
+
+    friend std::istream& operator>>(std::istream& is, Student& s) {
+        is >> s.name >> s.age;
+        return is;
+    }
+};
+
+// 使用：
+Student s;
+std::cin >> s;     // 输入
+std::cout << s;    // 输出
+```
+
+#### 4. 下标运算符（`[]`）
+```cpp
+class IntArray {
+private:
+    int data[10];
+
+public:
+    // 返回引用以支持修改
+    int& operator[](int index) {
+        if (index < 0 || index >= 10) throw std::out_of_range("Invalid index");
+        return data[index];
+    }
+
+    // const 版本
+    const int& operator[](int index) const {
+        if (index < 0 || index >= 10) throw std::out_of_range("Invalid index");
+        return data[index];
+    }
+};
+
+// 使用：
+IntArray arr;
+arr[3] = 42;       // 调用非 const 版本
+int val = arr[3];  // 调用 const 版本
+```
+
+#### 5. 自增/自减运算符（`++`, `--`）
+```cpp
+class Counter {
+private:
+    int count;
+
+public:
+    // 前缀 ++（返回引用）
+    Counter& operator++() {
+        ++count;
+        return *this;
+    }
+
+    // 后缀 ++（int 参数占位符，返回值而非引用）
+    Counter operator++(int) {
+        Counter temp = *this;
+        ++count;
+        return temp;
+    }
+};
+
+// 使用：
+Counter c;
+++c;    // 前缀
+c++;    // 后缀
+```
+
+#### 6. 赋值运算符（`=`, `+=`）
+```cpp
+class String {
+private:
+    char* buffer;
+
+public:
+    // 拷贝赋值
+    String& operator=(const String& other) {
+        if (this != &other) {  // 防止自赋值
+            delete[] buffer;
+            buffer = new char[strlen(other.buffer) + 1];
+            strcpy(buffer, other.buffer);
+        }
+        return *this;
+    }
+
+    // += 运算符
+    String& operator+=(const String& other) {
+        // 拼接逻辑
+        return *this;
+    }
+};
+```
+
+---
+
+### 三、注意事项
+1. **保持语义一致性**  
+   - 例如，`operator+` 不应修改操作数，而是返回新对象。
+
+2. **处理自赋值**  
+   - 在赋值运算符中检查 `if (this != &other)`。
+
+3. **返回引用还是值**  
+   - 赋值类运算符（`=`, `+=`）返回引用以支持链式调用。
+   - 算术运算符返回新对象（值类型）。
+
+4. **友元 vs 成员函数**  
+   - 当运算符的左操作数不是当前类时（如 `5 + obj`），必须使用友元函数。
+
+---
+
+### 四、特殊运算符
+#### 1. 函数调用运算符 `()`
+```cpp
+class Adder {
+public:
+    int operator()(int a, int b) const {
+        return a + b;
+    }
+};
+
+// 使用：
+Adder add;
+int sum = add(3, 4);  // 类似函数调用
+```
+
+#### 2. 类型转换运算符
+```cpp
+class MyInt {
+private:
+    int value;
+
+public:
+    operator int() const {  // 允许隐式转换为 int
+        return value;
+    }
+};
+
+// 使用：
+MyInt obj{42};
+int x = obj;  // 隐式转换
+```
+
+---
+
+### 五、错误示例
+#### 1. 不返回引用导致链式调用失败
+```cpp
+// 错误：返回 void 导致无法链式调用
+void operator<<(std::ostream& os, const MyClass& obj) {
+    os << obj.data;
+}
+```
+
+#### 2. 未处理自赋值
+```cpp
+// 错误：未检查自赋值导致内存泄漏
+String& operator=(const String& other) {
+    delete[] buffer;  // 如果 other == this，buffer 已被删除
+    // ...
+}
+```
+
+---
+
+### 六、最佳实践
+1. **优先实现为成员函数**，除非需要处理左操作数为非类类型的情况。
+2. **避免过度使用运算符重载**，确保其行为符合直觉。
+3. **为成对运算符提供对称实现**（如 `==` 和 `!=`）。
+
+---
+
+### 总结
+运算符重载的核心是为自定义类型赋予直观的操作语义。重点在于：
+- 选择成员函数或友元函数的形式。
+- 正确处理返回值和参数。
+- 遵循语言习惯（如 `operator+` 不修改操作数）。
 
 # auto关键词
 
@@ -2402,7 +2760,7 @@ mutex实例化的对象成员函数：
 - 可以随时加锁解锁
 - 作用域规则同 lock_grard，析构时自动释放锁
 - 不可复制，可移动
-- 条件变量需要该类型的锁作为参数（此时必须使用unique_lock）
+- **条件变量需要该类型的锁作为参数（此时必须使用unique_lock）**
 
 所有 lock_guard 能够做到的事情，都可以使用 unique_lock 做到，反之则不然。那么何时使lock_guard呢？很简单，需要使用锁的时候，首先考虑使用 lock_guard，因为lock_guard是最简单的锁。
 
@@ -2419,6 +2777,175 @@ unique_lock是一个类，其中管理了一个私有变量，在初始化的过
 需要注意的是，当 `std::unique_lock` 对象的析构函数被调用时，它会自动释放所管理的互斥量。这意味着，当 `std::unique_lock` 对象被销毁时，它所持有的互斥量将被解锁。这种自动解锁的机制可以有效地避免忘记手动释放互斥量而导致的死锁等问题。
 
 **众所周知，{}是放在栈上面的，所以离开了作用域后，就会执行析构函数，自动给mutex解锁。**
+
+
+
+## 条件变量-condition_variable
+
+在 C++ 多线程编程中，条件变量（`std::condition_variable`）必须与互斥锁（`std::mutex`）搭配使用，主要原因在于 **线程间对共享数据的同步访问** 和 **避免竞态条件**。以下是详细的解释：
+
+---
+
+### 1. **保护共享数据的状态**
+条件变量的核心作用是让线程等待某个条件成立（例如“队列非空”或“资源可用”），而条件的判断和修改通常涉及对共享数据的操作（如队列的状态）。  
+- **互斥锁的作用**：确保线程在 **检查条件是否成立** 和 **修改共享数据** 时是 **原子操作**。  
+- **若不加锁**：多个线程可能同时读写共享数据，导致数据不一致（例如，一个线程正在检查队列是否为空，另一个线程却在修改队列）。
+
+#### 示例场景（生产者-消费者模型）：
+```cpp
+std::queue<int> queue;  // 共享队列
+std::mutex mtx;         // 保护队列的互斥锁
+
+// 消费者线程
+void consumer() {
+    // 错误示例：不加锁直接访问共享队列
+    while (queue.empty()) {  // 非原子操作，可能被其他线程打断
+        // 等待队列非空...
+    }
+    // 取数据...
+}
+```
+- 在无锁的情况下，生产者可能在消费者检查 `queue.empty()` 之后、取数据之前修改队列，导致数据竞争。
+
+---
+
+### 2. **条件变量的等待机制需要锁**
+当线程调用 `cv.wait()` 时，条件变量会执行以下操作：  
+1. **释放锁**：让其他线程有机会修改共享数据。  
+2. **进入等待状态**：直到被 `notify_one()` 或 `notify_all()` 唤醒。  
+3. **重新获取锁**：唤醒后自动重新获取锁，确保后续操作的安全性。
+
+#### 关键流程：
+```cpp
+std::unique_lock<std::mutex> lock(mtx);
+cv.wait(lock, [] { return !queue.empty(); });  // 自动释放锁 -> 等待 -> 重新获取锁
+```
+- **必须使用 `std::unique_lock`**：因为 `wait()` 需要在等待期间释放锁，而 `lock_guard` 不支持手动释放。
+- lock_guard必须得是离开作用域之后在解锁，但是wait涉及到频繁的加解锁
+
+---
+
+### 3. **避免虚假唤醒（Spurious Wakeup）**
+操作系统可能在某些情况下（如信号中断）导致线程被意外唤醒，即使条件尚未满足。因此，线程在唤醒后必须 **重新检查条件是否成立**。  
+- **互斥锁的作用**：确保在检查条件时，共享数据不会被其他线程修改。  
+- **条件变量必须与锁绑定**：否则无法保证检查条件的原子性。
+
+#### 正确写法：
+```cpp
+std::unique_lock<std::mutex> lock(mtx);
+// 使用循环或带谓词的 wait() 避免虚假唤醒
+cv.wait(lock, [&] { return !queue.empty(); });  // 谓词会循环检查条件
+```
+
+---
+
+### 4. **通知机制需要锁**
+当线程调用 `notify_one()` 或 `notify_all()` 时，通常需要先修改共享数据（例如向队列中添加数据），而修改操作必须通过锁保护。  
+- **锁的作用**：确保其他线程看到的共享数据是修改后的最新状态。
+
+#### 生产者示例：
+```cpp
+void producer() {
+    {
+        std::lock_guard<std::mutex> lock(mtx);  // 修改共享数据前加锁
+        queue.push(42);
+    }  // 锁在作用域结束后自动释放
+    cv.notify_one();  // 通知消费者
+}
+```
+
+---
+
+### 总结：条件变量与互斥锁的关系
+| **条件变量**                           | **互斥锁**                          |
+| -------------------------------------- | ----------------------------------- |
+| 管理线程的等待和通知机制               | 保护共享数据的原子访问              |
+| 依赖锁来确保检查条件的原子性           | 提供对共享数据的独占访问            |
+| 在等待期间自动释放锁，唤醒后重新获取锁 | 通过 `lock()`/`unlock()` 控制临界区 |
+
+---
+
+### 常见错误
+1. **不加锁直接访问共享数据**：导致数据竞争。
+2. **使用 `lock_guard` 调用 `cv.wait()`**：`lock_guard` 无法释放锁。
+3. **不在循环中检查条件**：可能导致虚假唤醒后误判条件。
+
+---
+
+### 最终答案
+条件变量必须与互斥锁搭配使用，因为：  
+1. **共享数据的保护**：条件变量本身不保护共享数据，必须通过互斥锁确保条件的检查和修改是原子操作。  
+2. **等待/通知的原子性**：`cv.wait()` 需要释放锁以避免死锁，并在唤醒后重新获取锁。  
+3. **避免竞态条件**：防止多个线程同时修改和检查共享数据。  
+
+两者的协同工作确保了线程安全的高效同步。
+
+
+
+## 条件变量实现线程安全queue
+
+```c++
+//
+// Created by sophda on 2025/5/9.
+//
+
+#ifndef SAFEQUEUE_THREADSAFEQUEUE_H
+#define SAFEQUEUE_THREADSAFEQUEUE_H
+#include <iostream>
+//#include <deque>
+#include <mutex>
+#include <condition_variable>
+#include <queue>
+
+template<class T>
+class SafeQueue {
+
+private:
+    mutable std::mutex mutex_;
+    std::queue<std::shared_ptr<T > > queue_;
+    std::condition_variable cond_;
+
+public:
+    SafeQueue()=default;
+
+    bool is_empty(){
+        std::unique_lock<std::mutex> lock(mutex_);
+        return queue_.empty();
+    }
+    
+    void push(std::shared_ptr<T> item)
+    {
+        std::unique_lock<std::mutex> lock(mutex_);
+        queue_.push(item);
+        cond_.notify_one();
+    };
+    
+    std::shared_ptr<T > wait_and_pop(){
+        std::unique_lock<std::mutex > lock(mutex_);
+        
+        cond_.wait(lock, [this](){return !queue_.empty();});
+        // 对比下面的 写法
+        cond_.wait(lock, [this](){return !this->is_empty();});
+
+        std::shared_ptr<T > temp = queue_.front();
+        queue_.pop();
+        return temp;
+    };
+
+};
+
+
+#endif //SAFEQUEUE_THREADSAFEQUEUE_H
+
+```
+
+需要注意的是，条件变量的`wait`函数的工作机制。当调用`cond_.wait(lock, predicate)`时，`wait`会先释放锁，然后阻塞线程，直到被其他线程的通知唤醒。**当线程被唤醒后，`wait`会重新获取锁，并检查`predicate`条件是否为真。**如果为真，则继续执行；否则，再次释放锁并阻塞。
+
+在wait的过程中，锁是释放的，这时候可以加锁，但是**当被其他线程notify之后，会先上锁，然后检查谓语**，
+
+`cond_.wait(lock, [this](){return !this->is_empty();});`那么这句话会执行什么呢？ 首先被notify后会上锁，然后执行this->is_empty()，也就是说mutex已经被锁住了，但是is_empty会上锁，导致mutex重复上锁，导致未定义的行为。
+
+**谓语中尽量不要上锁，尤其是不要和wait的锁冲突！！**
 
 # STL
 
