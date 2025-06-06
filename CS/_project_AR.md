@@ -4,6 +4,20 @@
 
 浙大他们是使用的loftr进行的匹配，然后进行的slam定位，他妈的我用ace+slam应该也可以达到一样的效果，他妈的小小浙大，看我取之
 
+
+
+# 遇到的bug以及总结的规范
+
+主要是通过ndk stack将堆栈地址转换为对应源文件的地址，这样就可以准确定位出现问题的地方。
+
+## 多线程问题
+
+1.**类中的多线程对象**
+
+要声明为类的成员函数
+
+
+
 # ace libtorch部署
 
 ## libtorch安卓端交叉编译
@@ -331,7 +345,9 @@ if __name__ == '__main__':
 
 ---
 
-## matlab处理bag文件
+## matlab处理bag文件(aborted)
+
+使用imutils+kalibr吧~
 
 ```matlab
 % function data = ...
@@ -439,6 +455,55 @@ IMUMeasurements = dynamicData.imuMeasurements;
 % save required data
 save CameraIMUCalibrationData CameraFocalLength CameraPrincipalPoint ImageSize CheckerBoardSquareSize CheckerBoardSize StaticIMUMeasurements IMUMeasurements PatternDetections ImageTime
 ```
+
+
+
+
+
+## kalibr
+
+1.安装：
+
+```
+mkdir -p ~/kalibr_workspace/src
+
+cd ~/kalibr_workspace
+
+source /opt/ros/kinetic/setup.bash
+
+catkin init
+
+catkin config --extend /opt/ros/kinetic
+
+catkin config --cmake-args -DCMAKE_BUILD_TYPE=Release
+
+```
+
+```
+cd ~/kalibr_workspace/src
+git clone https://github.com/ethz-asl/Kalibr.git
+cd ~/kalibr_workspace
+catkin build -DCMAKE_BUILD_TYPE=Release -j8
+```
+
+```
+source ~/kalibr_workspace/devel/setup.bash
+或者是把这句放到bashrc中
+```
+
+
+
+## imu-utils
+
+```
+// 下面这句话在imu-utils的launch文件中找到
+roslaunch imu_utils realsense_imu.launch
+
+// 播放bag文件
+rosbag play -r 200 imu.bag
+```
+
+
 
 
 
