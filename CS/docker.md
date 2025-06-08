@@ -418,3 +418,9 @@ docker login -u admin -p lupengda 192.168.31.92:5000
  vllm serve Qwen/Qwen3-0.6B --max-model-len 500
 ```
 
+
+
+
+
+
+

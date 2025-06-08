@@ -1,4 +1,4 @@
-# 类型及关键词
+# 关键词
 
 内存：memory
 
@@ -72,6 +72,32 @@ int main ()
   return 0;
 }
 ```
+
+
+
+
+
+## sizeof和strlen
+
+![image-20250607150407629](src/image-20250607150407629.png)
+
+---
+
+![image-20250607150918247](src/image-20250607150918247.png)
+
+---
+
+![image-20250607150950016](src/image-20250607150950016.png)
+
+
+
+# auto和decltype
+
+- auto可以在编译器推导出变量的类型，**并且会忽略引用类型和cv限定（即const和volatile限定）**，一般涉及到引用的时候会定义成`const& a = xxx;`
+
+- decltype用于编译器分析表达式的类型，表达式不会进行运算，**会保留表达式的引用和cv属性**
+
+
 
 
 
@@ -501,6 +527,34 @@ double b = a;  // 隐式地将int转换为double
 
 ## 类型转换（各种cast）
 
+> 可以看成，将c语言中的类型强转拆分成为4个cast
+
+![image-20250607151428854](src/image-20250607151428854.png)
+
+![image-20250607152328220](src/image-20250607152328220.png)
+
+
+
+### static_cast
+
+编译器检查、运行时不检查
+
+![image-20250607151910600](src/image-20250607151910600.png)
+
+
+
+### dynamic_cast
+
+运行时检查，类包含虚函数可行
+
+![image-20250607152014083](src/image-20250607152014083.png)
+
+### const_cast
+
+谨慎使用
+
+![image-20250607152129368](src/image-20250607152129368.png)
+
 ### reinterpret_cast
 
 这个的作用是重新解释，也就是对一块内存区域重新解释含义，并不修改内存区域的值。
@@ -508,10 +562,13 @@ double b = a;  // 隐式地将int转换为double
 有什么用捏？
 
 - 比如写的是数据库或者网络协议栈，可能原始数据都是字节流，比如用unsigned char []来接收那个字节流，那么在解码的时候就需要根据额外的信息（比如规定这个数据的类型，类的结构等）来推断这个字节流表示的是什么数据类型
+- 修改指针的类型
 
-
+![image-20250607152201740](src/image-20250607152201740.png)
 
 # 4.引用
+
+**总结一下自己使用引用的经验：一般在使用函数的时候定义引用实参，替代指针这样可以直接在函数内修改外部的变量。不要在返回的时候使用引用，会导致悬垂引用**
 
 ```
 int main()
@@ -966,6 +1023,13 @@ public:
 }
 ```
 
+## 和struct的区别
+
+主要区别是默认访问级别：
+
+- struct的默认成员为public
+- class默认成员为private
+
 
 
 ## NEW
@@ -1089,8 +1153,6 @@ B fun_b(B &b){
 B& fun_c(){}
 // 尽量避免，返回的引用要是没有const延长变量生命周期，会造成悬垂引用
 ```
-
-
 
 
 
@@ -1531,7 +1593,7 @@ public:
 
 一般使用const修饰的类中的函数表示这个函数不会修改类的其他成员。如果有一个类tensor实例化后使用了const修饰，那么在使用类的函数的时候，只能使用类的const修饰的函数
 
-# 8.虚函数与内存模型
+# 虚函数与类的内存模型
 
 ## 虚函数
 
@@ -2171,7 +2233,7 @@ int main()
 
 
 
-# 模板
+# 8.模板
 
 模板是让编译器为你写代码。避免手动重载
 
@@ -2210,8 +2272,6 @@ int main()
 }
 ```
 
-
-
 ```c++
 template<int N>
 class Array
@@ -2245,6 +2305,48 @@ void main()
 }
 //输出为5
 ```
+
+
+
+## C11-尾返回类型
+
+可以先看下面这种情况：
+
+```
+decltype(x+y) add(T x, U y)
+```
+
+这会导致错误，因为**x和y尚未声明**
+
+---
+
+于是有了尾返回这种形式：**尾返回类型（Trailing Return Type）** 是 C++11 引入的特性，用于**将函数的返回类型声明放在参数列表之后**，语法为 `auto func(...) -> return_type`
+
+```
+auto function_name(parameters) -> return_type {
+    // 函数体
+}
+```
+
+---
+
+那么和模板结合在一起，就可以实现下面的效果：
+
+```c++
+template<typename T, typename U>
+auto add(T x, U y) -> decltype(x+y) {
+    return x+y;
+}
+
+auto c = add<int, float>(1,5.5);
+cout<< c <<endl;
+```
+
+卧槽看着有点匪夷所思啊~~
+
+
+
+## 可变模板参数
 
 # 操作符与重载
 
@@ -2525,7 +2627,7 @@ String& operator=(const String& other) {
 - 正确处理返回值和参数。
 - 遵循语言习惯（如 `operator+` 不修改操作数）。
 
-# auto关键词
+
 
 # 多线程
 
@@ -2949,7 +3051,7 @@ public:
 
 # STL
 
-## string
+## std::string
 
 
 
@@ -3024,7 +3126,28 @@ MyClass obj2 = createObject();  // Move constructor
 
 
 
+## std::function & bind
 
+可以完全替代以前那种繁琐的函数指针形式。
+
+
+
+## std::sort
+
+与lambda结合的方式：
+
+```c++
+#include<bits/stdc++.h>
+using namespace std;
+int a[15]={0,10,9,8,1,5,2,3,6,4,7};
+int main()
+{
+	sort(a,a+11,[](int x,int y){return x>y;});
+	for(int i=0;i<=10;i++)
+	cout<<a[i]<<" ";
+	return 0;
+}
+```
 
 # 容器
 
@@ -3152,9 +3275,9 @@ for (auto iter = vec_frame.rbegin(); iter != vec_frame.rend(); ++iter)
 
 
 
-## 关联容器
 
-### **map**
+
+## **map**
 
 按关键词有序保存元素，使用“键--值“对
 
@@ -3271,11 +3394,11 @@ int main()
 
 ***
 
-### **set**
+## **set**
 
 关键字即值，即只保存关键词的容器
 
-插入删除查找的复杂度为对数级，即使用红黑树算法实现，**内部数据是有序的**
+插入删除查找的复杂度为对数级，即使用**红黑树算法**实现，**内部数据是有序的**
 
 可以进行：
 
@@ -3309,7 +3432,51 @@ int main()
 
 ***
 
-### **multimap**
+
+
+## unordered_map
+
+使用哈希表实现，通过下面这个例子看到用法：
+
+即`map[key] = value`
+
+```c++
+class Solution {
+public:
+    vector<int> twoSum(vector<int>& nums, int target) {
+        unordered_map<int, int> map_;
+        for(int i = 0; i < nums.size(); i++)
+        {
+            if(map_.find(nums[i]) != map_.end())
+            {
+                return {map_.find(nums[i]), i };
+            }
+
+            map_[target-nums[i]] = i;
+
+        }
+    }
+};
+```
+
+函数：
+
+- map.find 通过key查找，返回迭代器
+
+
+
+## unordered_set
+
+一种哈希集合，可以用来检查有没有重复字符。
+
+- set.insert()  插入元素
+- set.count()  查找元素
+
+
+
+
+
+## **multimap**
 
 关键字可以重复的map
 
