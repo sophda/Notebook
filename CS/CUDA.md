@@ -221,7 +221,8 @@ CPU 与 GPU 之间的通信开销是比较大的。
 
 A100 硬件的架构如上图。其中 A100 SM 包含新的第三代 Tensor 内核：
 
-- **Registers**：每个 thread 专用的，这意味着分配给该线程的寄存器对其他线程不可见，编译器做出有关寄存器利用率的决策。 *** L1/Shared memory (SMEM)**：每个 SM 都有一个快速的 on-chip scratched 存储器，可用作 L1 cache 和 shared memory。CUDA block 中的所有线程可以共享 shared memory，并且在给定 SM 上运行的所有 CUDA Block 可以共享 SM 提供的物理内存资源。
+- **Registers**：每个 thread 专用的，这意味着分配给该线程的寄存器对其他线程不可见，编译器做出有关寄存器利用率的决策。 
+- *** L1/Shared memory (SMEM)**：在全局内存之外，GPU 还有一块位于芯片上的较小区域，被称为共享内存（SMEM）。每个 SM（流多处理器）都配备了一块共享内存。每个 SM 都有一个快速的 on-chip scratched 存储器，可用作 L1 cache 和 shared memory。CUDA block 中的所有线程可以共享 shared memory，并且在给定 SM 上运行的所有 CUDA Block 可以共享 SM 提供的物理内存资源。**从逻辑上看，共享内存在各个块之间进行了分区。这意味着一个线程可以通过共享内存块与同一块内的其他线程进行通信。共享内存的大小是可配置的，可以通过权衡以获得更大的共享内存而减小 L1 缓存的大小**。
 - **Read-only memory**：每个 SM 都具 instruction cache，constant memory，texture 和 RO cache，这对 kernel 代码是只读的
 - **L2 cache**：L2 cache 在所有 SM 之间共享，因此每个 CUDA block 中的每个线程都可以访问该内存。
 - **Global memory**：这是 GPU 和位于 GPU 中的 DRAM 的帧缓冲区大小。
@@ -370,6 +371,323 @@ bank是内存的访问时一种划分方式。
 - 左：线性寻址，步幅为一个 32 -bit（无 bank conflict）
 - 中：线性寻址，步幅为两个 32 -bit（双向 bank conflict）结合我画的那张图，步幅时2*4字节=8字节，这样数据在分配时，为bank  0、8/4=2、16/4=4、··· 120/4=30、（128/4）%32=0，于是可以看到，当线程在寻址时，会有线程寻址落在同一个bank内的情况，导致竞争->bank conflict
 - 右：线性寻址，步幅为三个 32 -bit（无 bank conflict）
+
+
+
+
+
+# Kernel
+
+
+
+## grid、block、thread
+
+GPU 上一般包含很多流式处理器 SM，每个 SM 是 CUDA 架构中的基本计算单元，其可分为若干（如 2~3）个网格，每个网格内包含若干（如 65535）个线程块，每个线程块包含若干（如 512）个线程，概要地理解的话：
+
+- `Thread`: 一个 CUDA Kernel 可以被多个 threads 来执行
+- `Block`: 多个 threads 会组成一个 Block，而同一个 block 中的 threads 可以同步，也可以通过 shared memory 通信
+- `Grid`: 多个 blocks 可以组成一个 Grid
+
+其中，一个 Grid 可以包含多个 Blocks。Blocks 的分布方式可以是一维的，二维，三维的；Block 包含多个 Threads，Threads 的分布方式也可以是一维，二维，三维的。
+
+---
+
+### block中线程数配置
+
+**以实现矩阵乘法为例**
+
+块中的线程数可以使用一个通常称为 `blockDim` 的变量进行配置，它是一个由三个整数组成的向量。该向量的条目指定了 `blockDim.x`、`blockDim.y` 和 `blockDim.z` 的大小，如下图所示：
+
+![picture 0](src/0b35adb64a964e56018dc9fb7277269a3efa72b1526058609e0860f33e00426b-b3a7e4298b605de4f56edfff09169f1a.png)
+
+同样，网格中的块数可以使用 `gridDim` 变量进行配置。当我们从主机启动一个新的内核时，它会创建一个包含按照指定方式排列的块和线程的单一网格。
+
+对于我们的第一个内核，我们将使用 `grid`、`block` 和 `thread` 的层次结构，每个线程计算结果矩阵 C 中的一个元素。该线程将计算矩阵 A 相应行和矩阵 B 相应列的点积，并将结果写入矩阵 C。由于矩阵 C 的每个位置仅由一个线程写入，我们无需进行同步。我们将以以下方式启动内核：
+
+```cpp
+#define CEIL_DIV(M, N) (((M) + (N)-1) / (N))
+
+dim3 gridDim(CEIL_DIV(M, 32), CEIL_DIV(N, 32), 1);
+// 32 * 32 = 1024 thread per block
+dim3 blockDim(32, 32, 1);
+sgemm_naive<<<gridDim, blockDim>>>(M, N, K, alpha, A, B, beta, C);
+```
+
+---
+
+
+
+CUDA 代码是从单线程的视角编写的。在内核代码中，我们使用 `blockIdx` 和 `threadIdx`。这些变量的值会根据访问它们的线程而异。在我们的例子中，`threadIdx.x` 和 `threadIdx.y` 将根据线程在网格中的位置从 0 到 31 变化。同样，`blockIdx.x` 和 `blockIdx.y` 也将根据线程块在网格中的位置从 0 到 `CEIL_DIV(N, 32)` 或 `CEIL_DIV(M, 32)` 变化。
+
+```cpp
+__global__ void sgemm_naive_kernel(float *A, float *B, float *C, int M, int N, int K)
+{
+    const uint x = blockIdx.x * blockDim.x + threadIdx.x;
+    const uint y = blockIdx.y * blockDim.y + threadIdx.y;
+    if (x < M && y < N)
+    {
+        float sum = 0.0f;
+        for (int i = 0; i < K; i++)
+        {
+            sum += A[x * K + i] * B[i * N + y];
+        }
+        C[x * N + y] = sum;
+    }
+}
+```
+
+
+
+下图可视化了我们的内核的执行方式：
+
+![picture 1](src/6f55c7f9531e5efd955eab9a572ef5406733498bc0b50abed0e73985d88c840b-a41ab97d63a8f3d017bacaede20e8b5e.png)
+
+一个好的编程习惯：在代码的最后一定一定记得释放堆内存，避免内存泄漏；并将指针置为空防止野指针的出现。不过这种事很容易忘记，有兴趣的宝贝可以学习下智能指针的用法，本文就不在展开介绍 C++ 的东西。
+
+```cpp
+free(cpu_addr); // 释放 CPU 内存
+cpu_addr = nullptr; // 置空
+
+cudaFree(cuda_addr); // cudaFree API 释放 cuda 内存
+cuda_addr = nullptr; // 置空
+```
+
+
+
+---
+
+### 一维 Grid
+
+Grid 为 一维，Block 为一维：
+
+```cpp
+int threadId = blockIdx.x *blockDim.x + threadIdx.x; 
+```
+
+
+
+Grid 为 一维，Block 为二维：
+
+```cpp
+int threadId = blockIdx.x * blockDim.x * blockDim.y + 
+              threadIdx.y * blockDim.x + threadIdx.x;  
+```
+
+
+
+Grid 为 一维，Block 为三维：
+
+```cpp
+int threadId = blockIdx.x * blockDim.x * blockDim.y * blockDim.z + 
+              threadIdx.z * blockDim.y * blockDim.x +
+              threadIdx.y * blockDim.x + threadIdx.x;  
+```
+
+
+
+### 二维 Grid
+
+Grid 为 二维，Block 为一维：
+
+```cpp
+int blockId = blockIdx.y * gridDim.x + blockIdx.x;  
+int threadId = blockId * blockDim.x + threadIdx.x;  
+```
+
+
+
+**Grid 为 二维，Block 为二维：**
+
+```cpp
+int blockId = blockIdx.x + blockIdx.y * gridDim.x;  
+int threadId = blockId * (blockDim.x * blockDim.y)  
+                       + (threadIdx.y * blockDim.x) + threadIdx.x;  
+```
+
+
+
+Grid 为 二维，Block 为三维：
+
+```cpp
+int blockId = blockIdx.x + blockIdx.y * gridDim.x;  
+int threadId = blockId * (blockDim.x * blockDim.y * blockDim.z)  
+                       + (threadIdx.z * (blockDim.x * blockDim.y))  
+                       + (threadIdx.y * blockDim.x) + threadIdx.x;  
+```
+
+
+
+### 三维 Grid
+
+Grid 为 三维，Block 为一维：
+
+```cpp
+int blockId = blockIdx.x + blockIdx.y * gridDim.x  
+             + gridDim.x * gridDim.y * blockIdx.z;  
+
+int threadId = blockId * blockDim.x + threadIdx.x;  
+```
+
+
+
+Grid 为 三维，Block 为二维：
+
+```cpp
+int blockId = blockIdx.x + blockIdx.y * gridDim.x  
+             + gridDim.x * gridDim.y * blockIdx.z;  
+
+int threadId = blockId * (blockDim.x * blockDim.y)  
+                       + (threadIdx.y * blockDim.x) + threadIdx.x;  
+```
+
+
+
+Grid 为 三维，Block 为三维：
+
+```cpp
+int blockId = blockIdx.x + blockIdx.y * gridDim.x  
+             + gridDim.x * gridDim.y * blockIdx.z;  
+
+int threadId = blockId * (blockDim.x * blockDim.y * blockDim.z)  
+                       + (threadIdx.z * (blockDim.x * blockDim.y))  
+                       + (threadIdx.y * blockDim.x) + threadIdx.x;
+```
+
+
+
+
+
+
+
+## 加法
+
+这个好像没什么可说的。
+
+```c++
+__global__ void cuda_add_thread(float* x, float* y, float* out, int n) {
+    int tid = threadIdx.x + blockDim.x * blockIdx.x;
+    if (tid < n) {
+        out[tid] = x[tid] + y[tid];
+    }
+}
+
+void test_add_thread() {
+    float* x, *y, *out;
+    float* cuda_x, *cuda_y, *cuda_out;
+    int N = 10000;
+    size_t mem_size = sizeof(float)*N;
+    x = static_cast<float*>(malloc(mem_size));
+    y = static_cast<float*>(malloc(mem_size));
+    out = static_cast<float*>(malloc(mem_size));
+
+    for(int i=0; i<N;i++){
+        x[i]=12.;
+        y[i]=5.;
+    }
+
+    cudaMalloc((void**)&cuda_x,mem_size);
+    cudaMemcpy(cuda_x,x,mem_size,cudaMemcpyHostToDevice);
+
+    cudaMalloc((void**)&cuda_y,mem_size);
+    cudaMemcpy(cuda_y,y,mem_size,cudaMemcpyHostToDevice);
+
+    cudaMalloc((void**)&cuda_out,mem_size);
+
+    cuda_add_thread<<<50,200>>>(cuda_x,cuda_y,cuda_out,N);
+
+    cudaMemcpy(out, cuda_out, mem_size, cudaMemcpyDeviceToHost);
+
+    cudaDeviceSynchronize();
+
+    print<float,int>(out,N);
+
+    cudaFree(cuda_x);
+    cudaFree(cuda_y);
+    cudaFree(cuda_out);
+
+    free(x);
+    free(y);
+    free(out);
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
