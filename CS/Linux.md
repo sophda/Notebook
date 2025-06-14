@@ -198,3 +198,47 @@ linux程序在移植的时候，动态库是可以不看路径的。比如说，
 
 
 
+# 硬盘
+
+## 查看连接的硬盘，即使没有挂载
+
+```
+fdisk -l
+```
+
+
+
+
+
+# Nginx
+
+## 配置代理
+
+
+
+在/etc/nginx/config.d/nas.conf中配置：
+
+```
+server {
+    listen 80;
+    listen [::]:80;
+    server_name www.sophda.top;  # 你的域名
+
+    location /nas {
+        proxy_pass http://localhost:20001;  # 转发到本地的20001端口
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+上面代码中，第三行特别重要，没有这行就会报错。
+
+然后重启：
+
+```
+sudo systemctl restart nginx
+```
+
