@@ -1595,6 +1595,22 @@ public:
 
 # 虚函数与类的内存模型
 
+## 概念
+
+#### 虚函数表（vtable）的物理存储
+
+- **全局数据区**：每个类的虚函数表在内存中是**唯一且全局共享**的
+- **只读内存段**：编译器将其放置在 `.rodata` (只读数据段) 中
+- **初始化时机**：在程序**装载时**由系统初始化，在整个程序生命周期内保持不变
+
+####  虚函数表指针（vptr）的位置
+
+- **对象内部**：每个包含虚函数的对象实例中
+- **内存偏移量**：通常位于对象内存布局的**起始位置**(0偏移处)
+- **大小**：与系统指针大小相同（x64系统为8字节）
+
+
+
 ## 虚函数
 
 - 虚函数必须要提供实现，子类选择性重写
@@ -2068,7 +2084,7 @@ Entity *e = new Entity();
    A::prv_foo2() addr: 0x400bea
    ```
 
-   可以看到：2个虚函数增加了1个指针的大小（指针指向内存地址，在这里是64为机器位数，占用内存空间即2^64=8byte）。也就是说，**这个指针即虚函数表的地址**，这个地址指向的内存表空间中存储着两个虚函数。
+   可以看到：2个虚函数使得对象增加了1个指针的大小（指针指向内存地址，在这里是64为机器位数，占用内存空间即2^64=8byte）。也就是说，**这个指针即虚函数表的地址**，这个地址指向的内存表空间中存储着两个虚函数。
 
    ![image-20230801085854130](src/image-20230801085854130.png)
 
@@ -2133,6 +2149,67 @@ int main() {
 ```
 
 上面这一种情况，因为基类包含virtual函数，则会有个虚函数表指针（大小为指针大小）。子类是继承的，所以也有。在执行`Entity* entity = dynamic_cast<Entity* >(p);`时，基类的虚函数表指针是在内存中的，属于类的成员变量，那么基类的虚函数表指针也会被赋值为子类的虚函数表指针，这时，就会执行子类的函数。进而输出“”
+
+
+
+## 普通成员函数与虚函数
+
+### 普通成员函数
+
+首先看一段可以运行的代码：
+
+```cpp
+class Test {
+public:
+    void hello() {
+        printf("hello\n");
+    }
+};
+
+int main() {
+    Test *p = nullptr;
+    p->hello();  // 通过空指针调用成员函数
+    return 0;
+}
+```
+
+通过一个空指针调用其成员函数，理论上是错误的，**但是对于非虚成员函数，编译器在编译时就已经将函数的调用绑定到具体的函数地址上，不需要在运行时查找虚函数表。**
+
+在运行时，调用成员函数hello，并且没有访问任何成员变量，也就是没有使用this指针（不涉及解引用），也就是编译器将其转换为普通函数调用`Test::hello(p)`即`Test::hello(nullptr)`，没有涉及到解引用是没问题的。
+
+
+
+### 虚函数
+
+然后是一段不可执行的代码：
+
+```cpp
+class Base {
+public:
+    virtual void hello() {
+        printf("Base hello\n");
+    }
+};
+
+class Test : public Base {
+public:
+    void hello() override { // 重写父类虚函数
+        printf("Test hello\n");
+    }
+};
+
+int main() {
+    Base* p = nullptr;
+    p->hello(); // 通过基类指针调用虚函数
+    return 0;
+}
+```
+
+这段代码是不可以运行的。
+
+在Base类中，hello是虚函数，也就是需要通过虚函数表指针去获取虚函数表才能调用，但是p没有实例化，也就是没有分配内存，也就没有虚函数指针，无法获取虚函数表，也就无法正常执行。
+
+
 
 
 
@@ -3273,11 +3350,207 @@ for (auto iter = vec_frame.rbegin(); iter != vec_frame.rend(); ++iter)
     cout<< a[1][1];
 ```
 
+### 动态扩展的原理
 
+当 `vector` 的当前容量（`capacity()`）不足以容纳新元素时，会触发动态扩展：
+
+1. 分配新内存
+   - 申请一块更大的内存（通常是当前容量的 **1.5 倍或 2 倍**，具体由编译器实现决定）。
+   - GCC 通常使用 **2 倍**，MSVC 使用 **1.5 倍**。
+2. 迁移数据
+   - 将旧内存中的元素**复制或移动**到新内存。
+   - 如果是 C++11 及以上，且元素支持移动语义，则使用移动构造（高效）。
+3. 释放旧内存
+   - 销毁旧元素并释放原内存块。
+4. 添加新元素
+   - 在新内存尾部插入新元素。
+
+### vector移动语义
+
+当 `vector` 重新分配内存时，元素迁移会优先尝试使用移动构造，但需要满足以下条件：
+
+- 元素类型必须具有**可访问的移动构造函数**（即定义了 `T(T&&)`）
+- 移动构造函数必须为 `noexcept`（或编译器可确定不会抛出异常）
+
+```cpp
+class Item {
+public:
+    // 移动构造函数（必须定义）
+    Item(Item&& other) noexcept : data_(std::move(other.data_)) {
+        other.data_ = nullptr;
+    }
+
+private:
+    int* data_;
+};
+```
+
+------
+
+**2. 为什么需要 `noexcept`？**
+
+`vector` 需要在重新分配时提供**强异常安全保证**（即使发生异常也不会泄漏资源）。具体规则：
+
+- 如果移动构造函数可能抛出异常（未标记 `noexcept`），`vector` 会**降级为使用拷贝构造函数**
+- 如果连拷贝构造函数也不可用，代码将编译失败
+
+```cpp
+class UnsafeItem {
+public:
+    // 无 noexcept → vector 不会使用此移动构造
+    UnsafeItem(UnsafeItem&& other) { ... } 
+};
+
+std::vector<UnsafeItem> vec;
+// 重新分配时会使用拷贝构造而非移动构造
+```
+
+
+
+
+
+## unordered_map
+
+### 使用
+
+使用哈希表实现，通过下面这个例子看到用法：
+
+即`map[key] = value`
+
+```c++
+class Solution {
+public:
+    vector<int> twoSum(vector<int>& nums, int target) {
+        unordered_map<int, int> map_;
+        for(int i = 0; i < nums.size(); i++)
+        {
+            if(map_.find(nums[i]) != map_.end())
+            {
+                return {map_.find(nums[i]), i };
+            }
+
+            map_[target-nums[i]] = i;
+
+        }
+    }
+};
+```
+
+函数：
+
+- map.find 通过key查找，返回迭代器
+
+
+
+### unordered_map支持自定义类
+
+`std::unordered_map`要求：
+
+1. **哈希函数**（计算键的哈希值）
+2. **相等比较**（判断两键是否相同）
+
+#### 方法1：特化`std::hash`并提供`operator==`
+
+cpp
+
+cpp
+
+复制
+
+cpp
+
+复制
+
+```cpp
+class TreeNode {
+public:
+    int id;  // 唯一标识
+    // ...
+
+    // 必须重载==运算符
+    bool operator==(const TreeNode& other) const {
+        return id == other.id;  // 用唯一ID判断相等
+    }
+};
+
+// 特化std::hash
+namespace std {
+    template <>
+    struct hash<TreeNode> {
+        size_t operator()(const TreeNode& node) const {
+            return hash<int>()(node.id);  // 用ID生成哈希
+        }
+    };
+}
+
+// 使用
+std::unordered_map<TreeNode, std::string> nodeUnorderedMap;
+```
+
+#### 方法2：自定义哈希器 + 相等器（推荐）
+
+```cpp
+class TreeNode {
+public:
+    int id;
+    std::string name;
+    // ...
+};
+
+// 自定义哈希器
+struct TreeNodeHash {
+    size_t operator()(const TreeNode& node) const {
+        return std::hash<int>()(node.id) ^ 
+              (std::hash<std::string>()(node.name) << 1);
+    }
+};
+
+// 自定义相等器
+struct TreeNodeEqual {
+    bool operator()(const TreeNode& a, const TreeNode& b) const {
+        return a.id == b.id && a.name == b.name;
+    }
+};
+
+// 使用（需指定哈希和相等器）
+std::unordered_map<
+    TreeNode, 
+    std::string,
+    TreeNodeHash,
+    TreeNodeEqual
+> nodeUnorderedMap;
+```
+
+#### 3. 指针作为键的特殊处理
+
+如果使用`TreeNode*`作为键，需自定义比较/哈希规则：
+
+```cpp
+struct TreeNodePtrHash {
+    size_t operator()(const TreeNode* node) const {
+        return std::hash<uintptr_t>()(reinterpret_cast<uintptr_t>(node));
+    }
+};
+
+struct TreeNodePtrEqual {
+    bool operator()(const TreeNode* a, const TreeNode* b) const {
+        return a->id == b->id;
+    }
+};
+
+std::unordered_map<
+    TreeNode*, 
+    std::string,
+    TreeNodePtrHash,
+    TreeNodePtrEqual
+> ptrUnorderedMap;
+```
 
 
 
 ## **map**
+
+### 基础使用
 
 按关键词有序保存元素，使用“键--值“对
 
@@ -3394,6 +3667,104 @@ int main()
 
 ***
 
+
+
+### map支持自定义类
+
+`std::map`要求键具备**严格弱序（Strict Weak Ordering）**，通常通过定义`<`运算符或提供自定义比较器实现。
+
+**方法1：类内重载`<`运算符**
+
+```cpp
+class TreeNode {
+public:
+    int value;
+    TreeNode* left;
+    TreeNode* right;
+
+    // 重载<运算符
+    bool operator<(const TreeNode& other) const {
+        return value < other.value;  // 假设用节点值比较
+    }
+};
+
+// 使用
+std::map<TreeNode, std::string> nodeMap;
+```
+
+
+
+**方法2：外部比较器（推荐）**
+
+```cpp
+class TreeNode {
+public:
+    int value;
+    // ... 其他成员
+};
+
+struct TreeNodeCompare {
+    bool operator()(const TreeNode& a, const TreeNode& b) const {
+        return a.value < b.value;
+    }
+};
+
+// 使用比较器
+std::map<TreeNode, std::string, TreeNodeCompare> nodeMap;
+```
+
+
+
+
+
+
+
+## map和unordered_map的区别
+
+### **1. 底层数据结构**
+
+|                  |         `std::map`         |      `std::unordered_map`      |
+| :--------------: | :------------------------: | :----------------------------: |
+|   **实现方式**   | 红黑树（自平衡二叉搜索树） | 哈希表（桶数组 + 链表/红黑树） |
+| **元素组织方式** | 按键排序（二叉搜索树性质） |   按键的哈希值组织（无顺序）   |
+
+------
+
+### **2. 元素排序特性**
+
+|                |        `std::map`        |         `std::unordered_map`         |
+| :------------: | :----------------------: | :----------------------------------: |
+|  **元素顺序**  | **按键升序排序**（默认） |      **无序**（取决于哈希函数）      |
+| **自定义排序** | 支持（通过比较函数对象） |                不支持                |
+|  **范围遍历**  | 有序（从最小键到最大键） | 完全随机（与插入顺序和哈希函数有关） |
+
+```cpp
+// map 有序遍历
+std::map<int, std::string> m = {{3, "Alice"}, {1, "Bob"}};
+for (auto& p : m) 
+    std::cout << p.first; // 输出 1 3（按键升序）
+
+// unordered_map 无序遍历
+std::unordered_map<int, std::string> um = {{3, "Alice"}, {1, "Bob"}};
+for (auto& p : um) 
+    std::cout << p.first; // 可能输出 3 1 或 1 3（顺序不确定）
+```
+
+------
+
+### **3. 时间复杂度对比**
+
+|     操作     |  `std::map`  |  `std::unordered_map`  |
+| :----------: | :----------: | :--------------------: |
+|   **插入**   |   O(log n)   |   平均O(1)，最坏O(n)   |
+|   **查找**   |   O(log n)   |   平均O(1)，最坏O(n)   |
+|   **删除**   |   O(log n)   |   平均O(1)，最坏O(n)   |
+| **范围查询** | O(log n + k) | O(n)（需遍历整个容器） |
+
+
+
+
+
 ## **set**
 
 关键字即值，即只保存关键词的容器
@@ -3434,35 +3805,6 @@ int main()
 
 
 
-## unordered_map
-
-使用哈希表实现，通过下面这个例子看到用法：
-
-即`map[key] = value`
-
-```c++
-class Solution {
-public:
-    vector<int> twoSum(vector<int>& nums, int target) {
-        unordered_map<int, int> map_;
-        for(int i = 0; i < nums.size(); i++)
-        {
-            if(map_.find(nums[i]) != map_.end())
-            {
-                return {map_.find(nums[i]), i };
-            }
-
-            map_[target-nums[i]] = i;
-
-        }
-    }
-};
-```
-
-函数：
-
-- map.find 通过key查找，返回迭代器
-
 
 
 ## unordered_set
@@ -3472,7 +3814,7 @@ public:
 - set.insert()  插入元素
 - set.count()  查找元素
 
-
+- set.find() 查找元素，返回元素的迭代器
 
 
 
