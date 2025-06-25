@@ -3831,8 +3831,28 @@ int main()
 
 - set.insert()  插入元素
 - set.count()  查找元素
-
 - set.find() 查找元素，返回元素的迭代器
+- set.erase() 删除元素
+- set_.cbegin() set的第一个元素的迭代器（指针）
+
+
+
+```
+class Solution {
+public:
+    int singleNumber(vector<int>& nums) {
+        unordered_set<int> set_;
+        for(auto iter : nums) {
+            if(set_.count(iter)) {
+                set_.erase(iter);
+            } else {
+                set_.insert(iter);
+            }
+        }
+        return *(set_.cbegin());
+    }
+};
+```
 
 
 
