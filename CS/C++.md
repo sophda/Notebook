@@ -2242,6 +2242,64 @@ int main() {
 
 
 
+## 派生类中调用基类虚函数
+
+比如下面这种情况：
+
+```cpp
+class Base {
+public:
+    Base() {};
+    virtual void setup() {
+        this->a = 10;
+    }
+    int a = 0;
+};
+
+class Derived : public Base {
+public:
+    Derived(){};
+    virtual void setup() {
+        cout<<a<<endl;
+        Base::setup();
+        this->b = 20;
+    }
+    int b = 0;
+};
+
+```
+
+**调用`Base::setup()`时发生了什么**
+
+```
+Base::setup()
+```
+
+调用这个时，编译器会做两件事：
+
+```cpp
+// 等效转换伪代码
+Base* basePtr = static_cast<Base*>(this); // 将this指针转为基类指针
+basePtr->Base::setup();                   // 静态调用基类函数
+```
+
+
+
+**在`Base::setup()`内部**
+
+```cpp
+void Base::setup(Base* const this) { // 隐含的this参数
+    this->a = 10; // 操作对象内存中的Base::a位置
+}
+```
+
+- 尽管函数属于基类，但`this`指针指向的仍是派生类对象
+- 因此实际修改的是派生类对象中的`Base::a`成员
+
+**也就是说，在调用基类的虚函数的时候，会将this（静态转换）转换为基类指针，然后去调用基类的函数，同时根据基类函数的this指针传入当前的对象，完成变量初始化**
+
+
+
 
 
 
@@ -2455,6 +2513,18 @@ cout<< c <<endl;
 
 
 ## 可变模板参数
+
+
+
+
+
+
+
+
+
+
+
+
 
 # 操作符与重载
 
