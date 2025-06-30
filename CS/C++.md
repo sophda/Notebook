@@ -3753,7 +3753,7 @@ int main()
 
 - maps.swap()交换两个map
 
-- maps.count()
+- maps.count()  主要是查找key的，无法查找value
 
   查找容器中是否存在某个元素，**结果只能是0或1**
 
@@ -3945,7 +3945,16 @@ public:
 
 
 
+## stack
 
+```
+stack<char> stk;
+stk.empty()  // 判断是不是空的
+stk.pop()  // 弹出
+stk.push('A')  // 压栈
+stk.
+
+```
 
 
 
