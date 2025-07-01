@@ -2300,6 +2300,8 @@ void Base::setup(Base* const this) { // 隐含的this参数
 
 
 
+## 派生类中的虚析构函数
+
 
 
 
