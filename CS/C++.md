@@ -2512,19 +2512,291 @@ cout<< c <<endl;
 
 卧槽看着有点匪夷所思啊~~
 
+## 万能引用
 
+![image-20250715005526027](src/image-20250715005526027.png)
+
+**注意：只有在函数声明的时候写`T&& v`时，是万能引用，这里的T&&并不是真正的右值引用，他既可以绑定左值，也可以绑定右值；其他比如在函数体中写的则是右值引用。**
+
+在类型推导时：实参为右值时，推到为对应的类型T；实参为左值时，推导为实参类型的引用即T&
+
+- 调用g(string("hello"))时，T被推导为T=string
+
+- 调用`string s = "hello"; g(s);`时，s是个左值，推导为s类型的引用即T=string&，此时g函数的实例化版本为：
+
+  ```
+  void g<string&>(string& && v) {
+  	f(std::forward<string&>(v));
+  }
+  ```
+
+  **因为出现了引用的引用，因此需要引用折叠规则：**
+
+  - 有左值引用时，折叠为左值引用
+  - 有两个右值引用时，折叠为右值引用
+
+  ![image-20250715010544789](src/image-20250715010544789.png)
 
 ## 可变模板参数
 
+###  1.模板参数包 (Template Parameter Pack)
+
+在模板定义中，`typename...` 或 `class...` 用来声明一个模板参数包。这个包可以容纳任意数量的类型。
+
+```
+template<typename... Args> // Args 是一个模板参数包
+class MyClass;
+
+template<typename... Ts>    // Ts 也是一个模板参数包
+void myFunction(Ts... args); // args 是一个函数参数包
+```
+
+在上面的例子中：
+
+- `Args` 和 `Ts` 就是**模板参数包**，它们可以代表 `int`, `double`, `std::string` 等任意一组类型。
+- `args` 是一个**函数参数包**，它包含了所有传递给函数的实际参数。
 
 
 
+### 2. 包展开 (Pack Expansion)
+
+你不能直接访问参数包中的每一个参数。相反，你需要**展开 (expand)** 这个包。展开是通过在参数包名字的右边放置 `...` 来实现的。
+
+例如，`Args...` 或 `args...` 就是一个包展开。它会将参数包中的每一个元素应用到某个模式 (pattern) 上。
+
+```
+#include <iostream>
+
+// 基本情况：当没有参数时，函数结束递归。
+void print() {
+    std::cout << "End of arguments." << std::endl;
+}
+
+// 递归定义：处理第一个参数，然后用剩下的参数包递归调用自身。
+template<typename T, typename... Args>
+void print(T firstArg, Args... args) {
+    std::cout << firstArg << std::endl; // 打印第一个参数
+    print(args...);                    // 递归调用，传入剩余的参数包
+}
+
+int main() {
+    print(1, 3.14, "hello", 'a');
+    return 0;
+}
+```
+
+### 应用
+
+**1.完美转发 (Perfect Forwarding)**: 这是可变参数模板最核心的应用之一。结合 `std::forward`，我们可以编写一个工厂函数或包装函数，它能接收任意参数，并以“完美”的方式（保持参数的左值/右值属性）转发给另一个函数。`std::make_unique`, `std::make_shared`, `std::vector::emplace_back` 等都依赖于此技术。
+
+```
+#include <memory>
+#include <utility>
+
+template<typename T, typename... Args>
+std::unique_ptr<T> make_unique_custom(Args&&... args) {
+    // std::forward<Args>(args)... 将每个参数完美转发给 T 的构造函数
+    return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+}
+```
+
+**2.类型安全的 `printf`**: 我们可以创建一个类型安全的打印函数，它在编译期就能检查格式字符串和参数类型是否匹配。
+
+**3.元组 (Tuple) 的实现**: `std::tuple` 就是一个典型的可变参数类模板。它可以持有任意数量、任意类型的异构数据。
+
+```
+template<class... Types>
+class tuple;
+
+std::tuple<int, std::string, double> t(42, "hello", 3.14);
+```
+
+**4.可以任意打印的print**
+
+```cpp
+template <typename... Args>
+void print(Args... args) {
+    ([&](){
+        cout<< args <<endl;
+        }(), ... );
+}
+
+#include "solution.h"
+int main() {
+    print(1,2,3,"hello");
+    return 0;
+```
+
+为什么可以这样子做呢？
+
+定义了一个lambda表达式即()[]{}
+
+但是这也仅仅是定义了表达式，模板展开中定义了，但是需要执行，就在后面加个小括号，表示执行函数。 `auto f = [](){}`,这个只是定义，`f()`才是执行
+
+### ...的作用
+
+1.在模板参数中或者是函数参数中时，比如`Args... args`表示args是个参数包
+
+2.在函数体中时，`args...`表示包展开，执行的是将args原地展开
+
+3.在一个表达式之后时，执行的是**折叠表达式**，表示这个表达式执行多次，按照顺序执行args中的参数。
+
+```cpp
+template <typename... Args>
+void p(Args... args) {
+    ([&](){
+        cout<< args << endl;
+    }(),...); // 执行的是折叠表达式
+}
+
+template <typename... Args>
+void print(Args... args) {
+    p(args...);  //将args参数原地展开
+}
+
+int main() {
+    print(1, 3.14, "hello", 'a');
+    return 0;
+}
+```
 
 
 
+### 通过sizeof获取参数个数
+
+```cpp
+template <typename... Args>
+void p(Args... args) {
+    printf("%d\n", sizeof...(Args));
+}
+p(1,2,"HELLO"); // 输出 3 
+```
 
 
 
+### 模板匹配
+
+**模板匹配的过程，是编译器通过“对比”【调用函数的实参】和【模板定义的形参模式】，来“推导”出【模板参数】的具体类型。**
+
+这种情况出现在模板参数和函数参数不一致时：
+
+对比一下两种情况：
+
+```cpp
+//情况1
+template <typename F, typename... Args>
+void call(const F& f, 
+          std::weak_ptr<connection> ptr, 
+          std::string& result, 
+          std::tuple<Args...> tp);
+          
+// 调用
+// 假设 my_tuple 是 std::tuple<int, double>
+call(f, conn, result, my_tuple);
+```
+
+---
+
+```cpp
+// 情况2
+template <typename F, typename... Args>
+void func(const F& f, Args... args);
+
+//调用
+// 假设 my_tuple 还是 std::tuple<int, double>
+func(f, conn, result, my_tuple);
+```
+
+在推导的时候，先根据实参去推导形参类型，然后确定模板参数：
+
+在情况1中：
+
+- const F& f对应f类型
+- std::weak_ptr<connection>对应conn
+- std::string& result对应result
+- std::tuple<Args...> tp对应mytuple
+
+因此Args...推导出来的是 int,double。验证：
+
+```cpp
+template <typename A,typename... Args>
+void call_tp(A a, tuple<Args...> tp) {
+    auto seq = make_index_sequence<sizeof...(Args)>();
+    printf("args nums: %d\n", sizeof...(Args));
+}
+
+int main() {
+//    print(1, 3.14, "hello", 'a');
+    auto tp = make_tuple(1,2,"hello");
+    call_tp(2,tp);
+    return 0;}
+    
+// 最后打印出来的Args的size对应着tuple的参数个数，即3
+```
+
+---
+
+在情况2中，去匹配函数形参类型然后类型推导：
+
+- const F&对应f类型
+- Args...类型对应着conn, result, my_tuple这三个
+
+
+
+### 获取模板参数索引
+
+通过c++14中的`make_index_sequence`获取`Args...`中的参数索引
+
+这里通过打印tuple中的每个元素来举例（打印tuple中的元素就要获取索引哦~）：
+
+```cpp
+template <typename... Args>
+void p(Args... args) {
+//    printf("%d\n", sizeof...(Args));
+    ([&](){
+        cout<< args << endl;
+    }(),...);
+}
+template <typename... Args>
+void print(Args... args) {
+    p(args...);
+}
+
+template <size_t... I,typename... Args>
+void tp_1(index_sequence<I...> seq, std::tuple<Args...> args) {
+//    print(get<I>(args)...);
+    print("index sequence: ", I...);
+    ([args](){
+        cout<< "id:" << I << "-" << get<I>(args) <<endl;
+    }(), ...);
+}
+
+template <typename A,typename... Args>
+void call_tp(A a, tuple<Args...> tp) {
+    auto seq = make_index_sequence<sizeof...(Args)>();
+    printf("args nums: %d\n", sizeof...(Args));
+    tp_1(seq, tp);
+}
+
+int main() {
+//    print(1, 3.14, "hello", 'a');
+    auto tp = make_tuple(1,2,"hello");
+    call_tp(2,tp);
+    return 0;
+```
+
+输出：
+
+![image-20250716172140698](src/image-20250716172140698.png)
+
+说明：
+
+- tuple中可以存放任意的类型
+- 通过是`std::get<id>(tuple)`来获取tuple中的元素
+- 第14行 tp_1的定义中，函数形参要写`index_sequence<I...> seq`来匹配实参的`auto seq = make_index_sequence<sizeof...(Args)>();`
+- 第26行调用tp_1的时候：
+  - tp_1的`index_sequence<I...> seq`对应seq，因此`I...`推导为`0,1,2`
+  - tp_1的`std::tuple<Args...> args`对应tp，因此`Args...`推到为`int,int,const char`
 
 
 
@@ -2971,7 +3243,7 @@ int main()
 
 
 
-## std::atomic和std::mutex
+## std::mutex
 
 多个线程进行时，如果操作同一个变量，那么肯定会出错，所以出现了这两个东西。
 
@@ -3229,6 +3501,103 @@ public:
 
 **谓语中尽量不要上锁，尤其是不要和wait的锁冲突！！**
 
+
+
+## 原子操作之std::atomic
+
+**为什么要有内存顺序？**
+
+因为在计算机中，为了发挥极致的性能，编译器和cpu会对代码指令进行重排。
+
+- 编译器重排是指：编译器在生成汇编代码时，如果发现两条指令互相不依赖，可能会调换他们的顺序以优化寄存器使用或改善指令流水线
+- CPU重排：为了充分利用执行单元和隐藏内存访问延迟，可能会乱序执行，一个核心的写入可能不会立即被其他的核心看到。
+
+---
+
+**1.`std::memory_order_relaxed`**
+
+**含义**：最宽松的顺序。
+
+**保证**：只保证当前原子操作的原子性。不提供任何额外的同步或顺序保证。
+
+**比喻**：一个“独行侠”。它只管自己完成任务（原子地读或写），不关心也不影响它前面或后面的任何其他读写操作。编译器和 CPU可以随意地将它与周围的非原子指令重排。
+
+**用途**：适用于那些**不用于同步线程**、只用于计数或统计等“单打独斗”的场景。例如，一个简单的引用计数器或性能监控计数器。
+
+**示例**：
+
+```cpp
+std::atomic<int> counter = {0};
+
+// 线程A、B、C...
+void increment() {
+    // 增加计数器。我们不在乎这个操作和其他内存访问的顺序。
+    // 我们只关心它最终被正确地增加了。
+    counter.fetch_add(1, std::memory_order_relaxed);
+}
+```
+
+**警告**：如果你需要根据 `counter` 的值来判断其他共享数据的状态，`relaxed` 就不够了。
+
+
+
+**2.`std::memory_order_release`(释放)和`std::memory_order_acquire`(获取)**
+
+`std::memory_order_release`
+
+- **用于**：**写操作**（`store`, `exchange`, `fetch_add` 等）。
+- **保证**：在 `release` 操作**之前**的所有内存读写（原子的或非原子的），都不能被重排到该操作**之后**。它就像一道向上的屏障。
+- **比喻**：**“发送方”或“发布者”**。它在发送消息（写入原子变量）前，确保所有要“打包”的数据都已经准备好。它向其他线程“释放”了这些数据的所有权。
+
+`std::memory_order_acquire`
+
+- **用于**：**读操作**（`load`, `exchange`, `fetch_add` 等）。
+- **保证**：在 `acquire` 操作之后的所有内存读写，都不能被重排到该操作**之前**。它就像一道向下的屏障。
+- **比喻**：**“接收方”或“订阅者”**。它在确认收到消息（读取原子变量）后，才会去“解包”并使用这些数据。它从其他线程“获取”了数据。
+
+**这里的要求的内存顺序重排，是指的在这个线程中，release之前的严格先于release语句；acquire之后的严格后于acquire语句。使用生产者-消费者来说明：必须得先生产出来释放（release）之后，消费才能获取（acquire）**
+
+---
+
+**通过原子操作实现两个线程打印奇偶数：**
+
+```c++
+class PrintJO_ATOMIC {
+private:
+    std::atomic<bool> is_print_j_{false}; //= {false};
+    int num = 0;
+public:
+    PrintJO_ATOMIC() = default;
+    void print_j() {
+        for (int i = 1; i < 100; i+=2) {
+            while(!is_print_j_.load(std::memory_order_acquire)){} ;
+                printf("jshu: %d\n", i);
+                is_print_j_.store(false, std::memory_order_release);
+        }
+    }
+    void print_o() {
+        for (int i = 0; i < 100; i+=2) {
+            while(is_print_j_.load(std::memory_order_acquire)){};
+                printf("oshu: %d\n",i);
+                is_print_j_.store(true, std::memory_order_release);
+        }
+    }
+    void start() {
+        std::thread *p_j = new thread(&PrintJO_ATOMIC::print_j, this);
+        std::thread *p_o = new thread(&PrintJO_ATOMIC::print_o, this);
+        p_j->join();
+        p_o->join();
+    }
+};
+```
+
+- 第9、16行中的while是**忙等待（自旋锁）**，也就是说当条件为真时，不会执行下面的指令
+- 因为要在两个线程之间进行切换，所以要设置一个公共变量作为flag，不想让哪个线程工作，就让这个线程的自旋锁工作（while循环），然后另一个线程就可以工作了。
+- order acquire之后的指令会严格在order之后执行，当自旋锁的while死循环跳出来之后，说明别的线程已经完成了状态切换，后面就可以按顺序执行了。
+- acquire 和 release只保证了在当前线程中按照一定的顺序执行，但是跨线程不能通知，所以设置标志位，但是标志位什么时候知道修改了呢？通过自旋锁不断查询标志位状态，然后执行后续指令。
+
+
+
 # STL
 
 ## std::string
@@ -3238,6 +3607,23 @@ public:
 ## std::pair
 
 
+
+## std::sort
+
+与lambda结合的方式：
+
+```c++
+#include<bits/stdc++.h>
+using namespace std;
+int a[15]={0,10,9,8,1,5,2,3,6,4,7};
+int main()
+{
+	sort(a,a+11,[](int x,int y){return x>y;});
+	for(int i=0;i<=10;i++)
+	cout<<a[i]<<" ";
+	return 0;
+}
+```
 
 
 
@@ -3249,8 +3635,13 @@ public:
 
 ### 2. **`std::move` 的作用**
 
-- **右值引用**: C++ 引入了右值引用（`T&&`）的概念，允许我们通过“移动”而非“复制”来处理资源。`std::move` 通过将一个左值转换为右值引用，启用了移动语义。
+- **右值引用**: C++ 引入了**右值引用（`T&&`）的概念**，允许我们通过“移动”而非“复制”来处理资源。`std::move` 通过将一个左值转换为右值引用，启用了移动语义。
+
 - **不进行深拷贝**: 通过使用 `std::move`，对象的资源所有权可以被转移，通常不会发生额外的深拷贝操作，从而提升性能。
+
+- ![image-20250715004909237](src/image-20250715004909237.png)
+
+  如图所示：尽管形参中的string && s是个右值引用，但是s本事是有地址的，是个左值。
 
 ### **3.  如何使用 `std::move`**
 
@@ -3312,22 +3703,144 @@ MyClass obj2 = createObject();  // Move constructor
 
 
 
-## std::sort
 
-与lambda结合的方式：
 
-```c++
-#include<bits/stdc++.h>
-using namespace std;
-int a[15]={0,10,9,8,1,5,2,3,6,4,7};
-int main()
-{
-	sort(a,a+11,[](int x,int y){return x>y;});
-	for(int i=0;i<=10;i++)
-	cout<<a[i]<<" ";
-	return 0;
+## std::future
+
+好的，没有问题。
+
+`std::future` 是C++标准库中的一个工具，它代表了一个**异步操作**（即在后台运行的任务）的最终结果。你可以把它想象成一张**“提货单”**或者一个**“承诺凭证”**。当你启动一个异步任务时，你不会立即得到结果，而是会立刻拿到这张“提货单”。然后，你可以拿着它在未来的某个时刻去提取任务完成后的真正结果。
+
+这个机制使得主线程不必在原地等待任务完成，可以继续执行其他工作，只在需要结果的时候才去获取，从而提高了程序的效率和响应性。
+
+你不能直接创建 `std::future`，而是通过以下三种主要方式从一个异步任务中获得它：
+
+----
+
+**获取方式**
+
+### 1. `std::async`
+
+
+
+这是最简单的异步运行一个函数的方式。`std::async` 会启动一个函数（可能在一个新线程中），并立即返回一个 `std::future` 对象，这个对象最终将持有该函数的返回值。
+
+C++
+
+```
+#include <iostream>
+#include <future>
+#include <chrono>
+
+// 一个耗时的计算函数
+int heavy_calculation() {
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    return 100;
+}
+
+int main() {
+    // 启动计算任务，并获取一个指向其结果的 future
+    std::future<int> result_future = std::async(std::launch::async, heavy_calculation);
+
+    std::cout << "计算正在后台运行，主线程可以做点别的事情...\n";
+
+    // 调用 .get() 等待并获取结果
+    int result = result_future.get();
+    std::cout << "计算结果是: " << result << std::endl;
 }
 ```
+
+
+
+### 2. `std::packaged_task`
+
+
+
+这个对象可以将一个函数包装起来，以便稍后执行。你可以在任务真正运行前，就从 `packaged_task` 中获取 `std::future`。这对于更复杂的场景（如线程池）非常有用，因为它将“任务的创建”和“任务的执行”分离开来。
+
+C++
+
+```
+#include <iostream>
+#include <future>
+#include <thread>
+
+int main() {
+    // 将一个 lambda 函数包装进 packaged_task
+    std::packaged_task<int()> task([]{ return 200; });
+
+    // 在任务运行前就获取 future
+    std::future<int> result_future = task.get_future();
+
+    // 在一个新线程上运行这个任务
+    std::thread t(std::move(task));
+    t.detach(); // 分离线程，让它在后台独立运行
+
+    // 获取结果
+    std::cout << "计算结果是: " << result_future.get() << std::endl;
+}
+```
+
+
+
+### 3. `std::promise`
+
+
+
+`std::promise` 对象可以让你**手动地**设置一个值（或一个异常），而这个值可以被一个与之关联的 `std::future` 获取。这让你能更精细地控制结果在何时变为可用。
+
+C++
+
+```
+#include <iostream>
+#include <future>
+#include <thread>
+#include <chrono>
+
+// 这个函数在稍后设置一个值
+void set_value_later(std::promise<int> p) {
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    p.set_value(300); // 兑现承诺
+}
+
+int main() {
+    std::promise<int> my_promise;
+    std::future<int> result_future = my_promise.get_future();
+
+    std::thread t(set_value_later, std::move(my_promise));
+    t.detach();
+
+    std::cout << "正在等待承诺被兑现...\n";
+    std::cout << "计算结果是: " << result_future.get() << std::endl;
+}
+```
+
+------
+
+
+
+### 如何使用 `std::future`
+
+
+
+`std::future` 对象有几个关键的成员函数来与异步结果进行交互：
+
+- **`get()`**: 等待任务完成，然后返回其结果。**这个函数只能被调用一次**。在 `get()` 被调用后，`future` 对象会变为无效状态。
+- **`wait()`**: 阻塞当前线程，直到结果可用，但它**不会**获取结果。之后你仍然可以调用 `get()` 来获取它。
+- **`wait_for()`**: 等待指定的时长。它会返回一个状态，用以表明是任务完成了还是等待超时了。
+- **`valid()`**: 检查 `future` 是否仍然与一个有效的结果关联。在 `get()` 被调用后，或者 `future` 被移动（move）后，它会返回 `false`。
+
+
+
+## std::tuple
+
+
+
+
+
+
+
+
 
 # 容器
 
