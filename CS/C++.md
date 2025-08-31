@@ -12,10 +12,6 @@
 
 模板：template
 
-## int
-
-## void *
-
 ## static
 
 使用static来指定变量，那么这个变量在link的时候只对这个编译单元（obj）里的东西可见
@@ -520,6 +516,24 @@ int main()
 
 使用shared_ptr时，可以通过解引用运算符（*）或箭头运算符（->）来访问其所管理的对象，也可以通过get()函数来获取原始指针，或者通过use_count()函数来获取共享所有权的数量。
 
+---
+
+**3.weak_ptr**
+
+本身不拥有对象的所有权，也不会增加所指对象的引用计数，主要解决的是shared_ptr的**循环引用问题**，可以看成对shared_ptr的观察者。
+
+【warning】不能直接从原始指针或者`unique_ptr`构造
+
+`weak_ptr<Myclass> wp1(make_shared<Myclass>(...));`
+
+- `wp1.reset()`表示将`weak_ptr`置空，不再观察任何对象
+
+- `wp1.lock()`尝试将弱引用提升为强引用`shared_ptr`,如果关联的`shared_ptr`管理的对象还有效，则返回一个新的有效的`shared_ptr`
+
+  如果是已经释放的shared_ptr，则返回空指针。
+
+- `wp1.expired()`检查观察的对象是否被释放，等价于检查`lock()==nullptr`
+
 
 
 ---
@@ -742,13 +756,13 @@ int& add(int & a, int b) {
 
 条件：
 
-**1.参数个数不同  // 调用相应的函数**
+**1.参数个数不同  调用相应的函数**
 
 **2.参数类型不同**
 
 **3.参数顺序不同**
 
-**// 函数返回值不能作为函数重载的条件**
+**函数返回值不能作为函数重载的条件**
 
 
 
@@ -955,15 +969,115 @@ void main()
     int a=5,b=5;
     c = add(a,b)*5; //替换发生在编译阶段
 }
-内联函数省去了函数调用时的压栈，跳转，返回的开销
-可以理解为用空间换时间
 ```
 
+- 内联函数省去了函数调用时的压栈，跳转，返回的开销
+- 可以理解为用空间换时间
 
 
 
+## lambda函数
 
+创建匿名函数对象，也称为闭包的方式。
 
+```
+[capture-list] (parameters) -> return-type { 
+    // function body 
+}
+```
+
+1. **`[capture-list]` （捕获列表）：**
+   - 这是 lambda 的核心机制，决定了 lambda **如何访问其定义范围（外围作用域）内的变量**。
+   - 捕获方式：
+     - **`[]`:** **不捕获任何外部变量**。只能使用 lambda 自身的参数和在 lambda 内部定义的局部变量。
+     - **`[var]`:** **值捕获**。捕获变量 `var` 的一个 **副本**。在 lambda 内部对该变量的修改不影响外部原始变量。
+     - **`[&var]`:** **引用捕获**。捕获变量 `var` 的 **引用**。在 lambda 内部对变量的修改直接影响外部原始变量。
+     - **`[=]`:** **隐式值捕获**。捕获所有外部变量（**在 lambda 被定义时**存在的且 **需要使用的**）的值副本。等价于在 `[]` 中显式列出所有需要用到的变量并用 `[var]` 方式捕获。
+     - **`[&]`:** **隐式引用捕获**。捕获所有外部变量（**在 lambda 被定义时**存在的且 **需要使用的**）的引用。等价于在 `[]` 中显式列出所有需要用到的变量并用 `[&var]` 方式捕获。
+     - **`[this]`:** 捕获当前类对象的指针 `this`。允许在 lambda 内部访问该对象的成员变量和成员函数（即使它们是 `private` 的）。
+     - **混合捕获:** 如 `[x, &y]`（值捕获 `x`，引用捕获 `y`）、`[=, &z]`（隐式值捕获所有，但显式引用捕获 `z`）、`[&, a]`（隐式引用捕获所有，但显式值捕获 `a`）。
+     - **初始化捕获 (C++14):** `[var = expression]` 或 `[&ref = expression]`。创建一个新的成员变量 `var`/`ref` 并**用表达式 `expression` 初始化它**，而不是捕获外部同名变量。`expression` 可以是不在捕获范围内的东西（如右值、新对象）。特别强大用于移动捕获 (`[var = std::move(other_var)]`) 或初始化“仅用于 lambda”的状态。
+2. **`(parameters)` （参数列表）：**
+   - 与普通函数的参数列表语法完全相同。指定 lambda 调用时需要接收的参数。
+   - 可以为空 `()`，表示不接受任何参数。
+   - 可以使用 `auto` 作为参数类型（C++14 起），实现泛型 lambda。
+3. **`-> return-type` （返回类型）：**
+   - **可选**。显式指定 lambda 表达式的返回类型。
+   - 如果省略：
+     - `return` 语句类型一致：编译器自动推导返回类型。
+     - 没有 `return` 语句 或 `return` 语句返回 `void`：返回类型被推导为 `void`。
+     - `return` 语句类型不一致（错误）：需要显式指定。
+   - **注意:** `-> return-type` 需要写在参数列表之后，`{}` 之前，不能放在其他地方。如果 `return-type` 是 `void` 且 lambda 体只有单个 `return;` 语句或无 `return`，可以省略 `-> void`。
+4. **`{ function-body }` （函数体）：**
+   - 包含了 lambda 被执行时运行的代码块。
+   - 可以使用捕获列表中捕获的变量和传递进来的参数。
+
+**简单示例：**
+
+```cpp
+// 1. 最简单的 lambda: 无捕获、无参数、返回 void、打印一句话
+auto greet = [] { std::cout << "Hello, Lambda!" << std::endl; };
+greet(); // 输出: Hello, Lambda!
+
+// 2. 带参数和返回值的 lambda (显式指定返回类型)
+auto add = [](int a, int b) -> int { return a + b; };
+int sum = add(5, 3); // sum = 8
+
+// 3. 值捕获示例
+int x = 10;
+auto copyX = [x] { std::cout << "Inside lambda, x (captured by value) = " << x << std::endl; };
+x = 20;
+copyX(); // 输出: Inside lambda, x (captured by value) = 10 （外部修改不影响内部副本）
+
+// 4. 引用捕获示例
+auto refX = [&x] { std::cout << "Inside lambda, x (captured by ref) = " << x << std::endl; };
+x = 30;
+refX(); // 输出: Inside lambda, x (captured by ref) = 30 （外部修改反映在内部引用）
+
+// 5. 在 STL 算法中使用 lambda (最常见场景)
+std::vector<int> nums = {1, 2, 3, 4, 5};
+// 使用 lambda 作为谓词进行过滤 (找出偶数)
+auto isEven = [](int n) { return n % 2 == 0; };
+auto evenEnd = std::remove_if(nums.begin(), nums.end(), isEven); // 移除非偶数
+nums.erase(evenEnd, nums.end());
+// 现在 nums 包含: 2, 4
+
+// 使用 for_each 遍历并修改 (引用捕获)
+std::for_each(nums.begin(), nums.end(), [](int& n) { n *= n; }); // 平方每个元素
+// 现在 nums 包含: 4, 16
+
+// 6. 泛型 lambda (C++14) - 使用 auto 参数
+auto genericMultiply = [](auto a, auto b) { return a * b; };
+double dResult = genericMultiply(2.5, 3.0); // 7.5
+int iResult = genericMultiply(2, 4); // 8
+
+// 7. 初始化捕获 (C++14) - 移动捕获示例
+std::unique_ptr<MyClass> ptr = std::make_unique<MyClass>();
+auto lambdaWithResource = [myPtr = std::move(ptr)] { // 移动ptr到lambda内部
+    if (myPtr) myPtr->doSomething();
+}; // ptr 现在为 nullptr (所有权转移给 lambda)
+```
+
+---
+
+**【warning】**如果用lambda捕获一个shared_ptr，会发生什么呢？
+
+```cpp
+std::weak_ptr<connection> weak = shared_from_this(); // ① 创建弱引用
+asio::post(socket_.get_executor(), [this, weak, sp_data, req_id, req_type] {
+    auto conn = weak.lock(); // ② 尝试获取对象的强引用
+    if (conn) { 
+        // ③ 对象存活：执行响应操作（在 IO 线程中安全操作 socket_）
+        response_interal(req_id, std::move(sp_data), req_type);
+    }
+    // 若 conn 为空，忽略操作（对象已销毁）
+});
+```
+
+- 这是一个异步编程，通过asio::post提交任务的函数，在lambda中有要捕获的参数列表
+- lambda捕获一个`shared_ptr`时，在lambda表达式创建的那一刻就会捕获变量（而不是在执行的时候），因此原始的shared_ptr引用计数会+1
+- 这里捕获的是`weak_ptr`，不会导致原来的`sharedptr`+1，但是在lambda表达式的内部有`weak_ptr.lock()`，这也会导致原来的`shared_ptr`+1，但是区别是：定义在lambda内部，表明这个函数已经执行了，conn对象在lambda执行完后即可释放
+- 如果捕获的是`shared_ptr`，在表达式创建的时候原来的`shared_ptr`会+1，即使这个lambda表达式在队列中永远没有执行，但是只要存在队列中，内部捕获的`shared_ptr`副本就会一直存在，导致原来的connection对象引用计数一直维持，无法释放。
 
 
 
@@ -1124,6 +1238,78 @@ int main()
 **2.protected继承：**基类public成员，protected成员，private成员的访问属性在派生类中分别变成：protected, protected, private
 
 **3.private继承：**基类public成员，protected成员，private成员的访问属性在派生类中分别变成：private, private, private
+
+---
+
+## private对象访问
+
+### 允许访问的场景
+
+1. **通过公有成员函数访问**（标准做法）
+
+   ```cpp
+   class MyClass {
+   private:
+       int secret;
+   public:
+       void setSecret(int value) { secret = value; } // 公有方法修改私有变量
+       int getSecret() const { return secret; }      // 公有方法读取私有变量
+   };
+   
+   int main() {
+       MyClass obj;
+       obj.setSecret(10);         // 合法：通过公有函数间接访问
+       int val = obj.getSecret(); // 合法
+       return 0;
+   }
+   ```
+
+2. **友元函数/类**（谨慎使用）
+
+   ```cpp
+   class MyClass {
+   private:
+       int secret;
+       friend void hack(MyClass&); // 声明友元
+   };
+   
+   void hack(MyClass& obj) {
+       obj.secret = 42; // 友元可直接访问私有成员
+   }
+   ```
+
+------
+
+### 重要细节
+
+- **同类对象间的访问**：
+   类成员函数中可访问**其他同类对象**的私有成员：
+
+  ```cpp
+  class MyClass {
+  public:
+      void copySecret(const MyClass& other) {
+          this->secret = other.secret; // 合法：同类型对象的私有成员互访
+      }
+  private:
+      int secret;
+  };
+  ```
+
+- **访问控制基于类而非对象**：
+   如上例所示，同类对象的私有数据在成员函数中无访问壁垒。
+
+------
+
+### 总结
+
+| 访问方式                 | 是否合法 | 说明               |
+| ------------------------ | -------- | ------------------ |
+| `obj.privateVar`         | ❌ 非法   | 外部直接访问       |
+| 内部成员函数访问         | ✔️ 合法   | 类内无限制         |
+| 公有成员函数间接访问     | ✔️ 合法   | 推荐做法（封装性） |
+| 友元函数                 | ✔️ 合法   | 打破封装（慎用）   |
+| 同类对象在成员函数中访问 | ✔️ 合法   | 类作用域内权限共享 |
 
 
 
@@ -1649,7 +1835,7 @@ public:
 
 
 
-virtual关键词表示这个类的派生类可以 **重写** 这个函数，那么在派生类中重写的时候可以加也可以不加virtual关键词，主要看这个类的派生类需不需要重写
+virtual关键词表示这个类的派生类可以 **重写** 这个函数，那么在派生类中重写的时候可以加也可以不加virtual关键词，主要看这个类的派生类需不需要重写  
 
 ---
 
@@ -2179,7 +2365,7 @@ int main() {
 }
 ```
 
-上面这一种情况，因为基类包含virtual函数，则会有个虚函数表指针（大小为指针大小）。子类是继承的，所以也有。在执行`Entity* entity = dynamic_cast<Entity* >(p);`时，基类的虚函数表指针是在内存中的，属于类的成员变量，那么基类的虚函数表指针也会被赋值为子类的虚函数表指针，这时，就会执行子类的函数。进而输出“”
+上面这一种情况，因为基类包含virtual函数，则会有个虚函数表指针（大小为指针大小）。子类是继承的，所以也有。**在执行`Entity* entity = dynamic_cast<Entity* >(p);`时，基类的虚函数表指针是在内存中的，属于类的成员变量，那么基类的虚函数表指针也会被赋值为子类的虚函数表指针**，这时，就会执行子类的函数。进而输出“player”
 
 
 
@@ -2301,6 +2487,113 @@ void Base::setup(Base* const this) { // 隐含的this参数
 
 
 ## 派生类中的虚析构函数
+
+```cpp
+#include <iostream>
+using namespace std;
+
+class base {
+public:
+	int a = 0;
+	virtual void f() {
+		cout << "base:f" <<endl;
+	};
+	virtual void c() {
+		cout << a <<"base:c" <<endl;
+	}
+	virtual ~base() {
+		cout << "del base" <<endl;
+	};
+
+};
+class de : public base {
+public:
+	void f() {
+		cout << "de:f" <<endl;
+	};
+	
+	void c() {
+		cout << "de:c" <<endl;
+	}
+	~de() {
+		cout << "del derived" << endl;	
+	}
+};
+
+
+int main()
+{
+	base* a = new de();
+	delete a;
+	return 0;
+}
+```
+
+在调用`delete a;`时会发生什么？
+
+- a是一个指向派生类的基类指针
+- 如果调用a的虚函数，则指向派生类的虚函数实现
+- 如果调用a的非虚函数，则调用基类的非虚函数
+
+
+
+## 静态检查与动态绑定
+
+- 静态检查：这是**编译时**的工作
+- 动态绑定：这是**运行时**的行为
+
+涉及到**静态检查**的情况：在编译时，如果调用一个**类的函数**，会检查这个类中有没有这个函数的定义，无论是虚函数还是非虚函数。只要声明存在就合法。
+
+涉及到**动态绑定**的情况：通过对象的虚函数指针，去找虚函数表，然后调用。
+
+```cpp
+#include <iostream>
+using namespace std;
+
+class base {
+public:
+	int a = 0;
+	virtual void f() {
+		cout << "base:f" <<endl;
+	};
+	void c() {
+		cout << a <<"base:c" <<endl;
+	}
+	virtual ~base() {
+		cout << "del base" <<endl;
+	};
+
+};
+class de : public base {
+public:
+	void f() {
+		cout << "de:f" <<endl;
+	};
+	
+	virtual void e() {
+		cout<< "d:e" <<endl;
+	}
+	
+
+	~de() {
+		cout << "del derived" << endl;	
+	}
+};
+
+int main()
+{
+
+	de* a = new de();
+	a->e();
+	delete a;
+   return 0;
+}
+```
+
+这是一种不合法的情况：因为在`base`类中并没有定义`e()`函数
+
+
+
 
 
 
@@ -2532,8 +2825,8 @@ cout<< c <<endl;
 
   **因为出现了引用的引用，因此需要引用折叠规则：**
 
-  - 有左值引用时，折叠为左值引用
-  - 有两个右值引用时，折叠为右值引用
+  - **有左值引用时，折叠为左值引用**
+  - **有两个右值引用时，折叠为右值引用**
 
   ![image-20250715010544789](src/image-20250715010544789.png)
 
@@ -2564,7 +2857,7 @@ void myFunction(Ts... args); // args 是一个函数参数包
 
 例如，`Args...` 或 `args...` 就是一个包展开。它会将参数包中的每一个元素应用到某个模式 (pattern) 上。
 
-```
+```cpp
 #include <iostream>
 
 // 基本情况：当没有参数时，函数结束递归。
@@ -2711,10 +3004,10 @@ func(f, conn, result, my_tuple);
 
 在情况1中：
 
-- const F& f对应f类型
-- std::weak_ptr<connection>对应conn
-- std::string& result对应result
-- std::tuple<Args...> tp对应mytuple
+- `const F& f`对应f类型
+- `std::weak_ptr<connection>`对应conn
+- `std::string& result`对应result
+- `std::tuple<Args...> tp`对应mytuple
 
 因此Args...推导出来的是 int,double。验证：
 
@@ -3514,7 +3807,7 @@ public:
 
 ---
 
-**1.`std::memory_order_relaxed`**
+### **1.`std::memory_order_relaxed`**
 
 **含义**：最宽松的顺序。
 
@@ -3541,7 +3834,7 @@ void increment() {
 
 
 
-**2.`std::memory_order_release`(释放)和`std::memory_order_acquire`(获取)**
+### **2.`std::memory_order_release`(释放)和`std::memory_order_acquire`(获取)**
 
 `std::memory_order_release`
 
@@ -3556,6 +3849,67 @@ void increment() {
 - **比喻**：**“接收方”或“订阅者”**。它在确认收到消息（读取原子变量）后，才会去“解包”并使用这些数据。它从其他线程“获取”了数据。
 
 **这里的要求的内存顺序重排，是指的在这个线程中，release之前的严格先于release语句；acquire之后的严格后于acquire语句。使用生产者-消费者来说明：必须得先生产出来释放（release）之后，消费才能获取（acquire）**
+
+---
+
+`std::memory_order_release` 和 `std::memory_order_acquire`是如何起作用的？
+
+**这两条指令是约束的一个线程内的行为。**
+
+让我们把这个过程拆解开来，就能彻底明白。
+
+**第一步：`release` 的本地承诺**
+
+想象一个线程 A，它正在执行以下代码：
+
+```cpp
+// 线程 A 的代码
+void producer() {
+    // 1. 普通的内存写入
+    shared_data = 42;
+    data_is_ready = true;
+
+    // 2. release 操作
+    flag.store(true, std::memory_order_release); 
+}
+```
+
+`std::memory_order_release` 在这里的作用，就像是对编译器和CPU下达了一个命令：
+
+> “听着，`flag.store` 是一个关键的发布点。在我的这个线程里，**任何在代码书写顺序上位于 `flag.store` 之前的读写操作**（比如对 `shared_data` 和 `data_is_ready` 的写入），都**绝对不能**被重排到 `flag.store` 这条指令**之后**去执行。你必须保证，在我宣布‘标志为真’之前，所有准备工作都已完成并刷新到内存中。”
+
+所以，这个“之前”是严格限制在**线程A内部**的指令顺序。它保证了线程A的执行流程是：
+
+1. 完成所有准备工作（写入 `shared_data` 等）。
+2. 然后，才去设置那个 `flag`。
+
+这只是故事的一半。到目前为止，这还只是线程A的“一厢情愿”。
+
+**第二步：`acquire` 的跨线程感知**
+
+现在，另一个线程 B 登场了。它如何知道线程 A 的准备工作已经完成？通过 `acquire`。
+
+```cpp
+// 线程 B 的代码
+void consumer() {
+    // 3. acquire 操作
+    while (!flag.load(std::memory_order_acquire)) {
+        // 等待...
+    }
+
+    // 4. 使用数据
+    // 到这里时，我们就能安全地使用数据了
+    if (data_is_ready) {
+        std::cout << "Data is " << shared_data << std::endl; // 保证能看到 42
+    }
+}
+```
+
+当线程 B 的 `flag.load(std::memory_order_acquire)` 成功读取到 `true` 时，一个神奇的跨线程“因果关系”就建立起来了。
+
+`acquire` 语义在这里的作用是：
+
+> “听着，`flag.load` 是一个关键的接收点。一旦我成功读取到了由 `release` 操作写入的值，我就有权**看到**那个 `release` 操作**之前**发生的所有内存写入。并且，在我这个线程里，任何在代码顺序上位于 `flag.load` **之后**的读写操作（比如读取 `shared_data`），都**绝对不能**被重排到 `flag.load` **之前**去。”
 
 ---
 
@@ -3601,6 +3955,11 @@ public:
 # STL
 
 ## std::string
+
+```
+std::string str;
+str.size();
+```
 
 
 
@@ -3707,8 +4066,6 @@ MyClass obj2 = createObject();  // Move constructor
 
 ## std::future
 
-好的，没有问题。
-
 `std::future` 是C++标准库中的一个工具，它代表了一个**异步操作**（即在后台运行的任务）的最终结果。你可以把它想象成一张**“提货单”**或者一个**“承诺凭证”**。当你启动一个异步任务时，你不会立即得到结果，而是会立刻拿到这张“提货单”。然后，你可以拿着它在未来的某个时刻去提取任务完成后的真正结果。
 
 这个机制使得主线程不必在原地等待任务完成，可以继续执行其他工作，只在需要结果的时候才去获取，从而提高了程序的效率和响应性。
@@ -3721,11 +4078,7 @@ MyClass obj2 = createObject();  // Move constructor
 
 ### 1. `std::async`
 
-
-
 这是最简单的异步运行一个函数的方式。`std::async` 会启动一个函数（可能在一个新线程中），并立即返回一个 `std::future` 对象，这个对象最终将持有该函数的返回值。
-
-C++
 
 ```
 #include <iostream>
@@ -3754,11 +4107,7 @@ int main() {
 
 ### 2. `std::packaged_task`
 
-
-
 这个对象可以将一个函数包装起来，以便稍后执行。你可以在任务真正运行前，就从 `packaged_task` 中获取 `std::future`。这对于更复杂的场景（如线程池）非常有用，因为它将“任务的创建”和“任务的执行”分离开来。
-
-C++
 
 ```
 #include <iostream>
@@ -3785,11 +4134,7 @@ int main() {
 
 ### 3. `std::promise`
 
-
-
 `std::promise` 对象可以让你**手动地**设置一个值（或一个异常），而这个值可以被一个与之关联的 `std::future` 获取。这让你能更精细地控制结果在何时变为可用。
-
-C++
 
 ```
 #include <iostream>
@@ -3821,8 +4166,6 @@ int main() {
 
 ### 如何使用 `std::future`
 
-
-
 `std::future` 对象有几个关键的成员函数来与异步结果进行交互：
 
 - **`get()`**: 等待任务完成，然后返回其结果。**这个函数只能被调用一次**。在 `get()` 被调用后，`future` 对象会变为无效状态。
@@ -3838,7 +4181,25 @@ int main() {
 
 
 
+## std::accumulate
 
+### 累加
+
+```cpp
+vector<int> nums;
+std::accumulate(nums.begin(), nums.end(), 0);
+```
+
+`std::accumulate()`传递进去的迭代器是**左闭右开**的形式，也就是说`nums.end()`其实指向的结尾元素的下一个迭代器。
+
+---
+
+如果只知道索引i和j，不知道迭代器，怎么去进行累加呢？
+
+```cpp
+// 对下标i->j的元素进行累加
+std::accumulate(nums.begin()+i, nums.begin()+j+1,0);
+```
 
 
 
@@ -4023,6 +4384,59 @@ std::vector<UnsafeItem> vec;
 
 
 
+## deque
+
+deque是一个双端队列，支持从队首和队尾插入和删除元素
+
+**构造：**
+
+- `std::deque<T> d;` // 空 deque
+- `std::deque<T> d(n);` // 包含 n 个默认初始化的元素
+- `std::deque<T> d(n, value);` // 包含 n 个值为 value 的元素
+- `std::deque<T> d(begin_it, end_it);` // 用迭代器范围构造
+- `std::deque<T> d(other_deque);` // 拷贝构造
+- `std::deque<T> d(std::move(other_deque));` // 移动构造 (C++11)
+- `std::deque<T> d({1, 2, 3});` // 初始化列表构造 (C++11)
+
+---
+
+**元素访问：**
+
+- `d[i]` // 访问索引 i 处的元素（**不检查边界**）
+- `d.at(i)` // 访问索引 i 处的元素（**检查边界**，越界抛出 `std::out_of_range`）
+- `d.front()` // 访问第一个元素
+- `d.back()` // 访问最后一个元素
+
+**迭代器：** 支持所有标准迭代器（`begin`, `end`, `cbegin`, `cend`, `rbegin`, `rend`, `crbegin`, `crend`），用于遍历。
+
+**容量：**
+
+- `d.empty()` // 检查是否为空
+- `d.size()` // 返回元素数量
+- `d.max_size()` // 返回可能的最大元素数量（理论值）
+- `d.shrink_to_fit()` // **请求**移除未使用的容量（**非强制**，实现可能忽略）(C++11)
+
+**修改器：**
+
+- `d.clear()` // 清除所有内容
+- `d.insert(pos_it, value)` // 在迭代器 pos_it 前插入 value
+- `d.insert(pos_it, n, value)` // 在迭代器 pos_it 前插入 n 个 value
+- `d.insert(pos_it, begin_it, end_it)` // 在迭代器 pos_it 前插入迭代器范围
+- `d.insert(pos_it, {val1, val2})` // 在迭代器 pos_it 前插入初始化列表 (C++11)
+- `d.erase(pos_it)` // 删除迭代器 pos_it 指向的元素
+- `d.erase(begin_it, end_it)` // 删除迭代器范围 [begin_it, end_it) 的元素
+- `d.push_back(value)` // **在尾部添加元素（拷贝）**
+- `d.emplace_back(args...)` // 在尾部**就地构造**元素（避免拷贝/移动）(C++11)
+- `d.pop_back()` // **删除尾部元素**
+- `d.push_front(value)` // **在头部添加元素（拷贝）**
+- `d.emplace_front(args...)` // 在头部**就地构造**元素（避免拷贝/移动）(C++11)
+- `d.pop_front()` // **删除头部元素**
+- `d.resize(n)` // 改变大小，新元素默认初始化
+- `d.resize(n, value)` // 改变大小，新元素初始化为 value
+- `d.swap(other_deque)` // 交换两个 deque 的内容
+
+
+
 
 
 ## unordered_map
@@ -4066,16 +4480,6 @@ public:
 2. **相等比较**（判断两键是否相同）
 
 #### 方法1：特化`std::hash`并提供`operator==`
-
-cpp
-
-cpp
-
-复制
-
-cpp
-
-复制
 
 ```cpp
 class TreeNode {
