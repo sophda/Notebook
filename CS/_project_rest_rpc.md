@@ -10,10 +10,6 @@
 
 ### 调用流程图 (简化版)
 
-
-
-Code snippet
-
 ```
 sequenceDiagram
     participant C as 用户代码 (Client)

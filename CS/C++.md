@@ -1,16 +1,4 @@
-# 关键词
-
-内存：memory
-
-指针：pointer
-
-内存池：memory arena
-
-智能指针：custom allocator
-
-移动语义：move semantics
-
-模板：template
+# 0.0关键词
 
 ## static
 
@@ -93,11 +81,351 @@ int main ()
 
 - decltype用于编译器分析表达式的类型，表达式不会进行运算，**会保留表达式的引用和cv属性**
 
+---
+
+【注意】auto只是推导不出cv限定，但是可以推导出指针的。
+
+```
+int a = 5; 
+auto *p  = &a; p被推导为什么类型？
+```
+
+这里的`p`会被推导为`int*`
+
+
+
+## const
+
+tmd你奶奶的，当使用const修饰类对象时，那么会向编译器声明这个对象在整个声明周期都不会改变。
+
+因此调用这个对象的`非constc成员函数`时，会触发编译错误
+
+```c++
+#include <iostream>
+
+class T {
+public:
+    void nonConstFunc() { // 非 const 成员函数
+        std::cout << "nonConstFunc() called." << std::endl;
+        m_value = 100; // 允许修改成员变量
+    }
+
+    void constFunc() const { // const 成员函数
+        std::cout << "constFunc() called." << std::endl;
+        // m_value = 200; // 错误：不能在 const 成员函数中修改成员变量
+    }
+
+private:
+    int m_value = 0;
+};
+
+int main() {
+    const T ob; // 创建一个 const 对象
+
+    // ob.nonConstFunc(); // <-- 这里将导致编译错误！
+
+    ob.constFunc(); // <-- 这个调用是合法的，可以通过编译。
+
+    T nonConstOb; // 创建一个非 const 对象
+    nonConstOb.nonConstFunc(); // 合法
+    nonConstOb.constFunc();    // 也合法
+
+    return 0;
+}
+```
 
 
 
 
-# 文件
+
+## constexpr
+
+
+
+
+
+# 0.1操作符与重载
+
+## 操作符
+
+### 单目运算符
+
+![image-20231204001558057](src/image-20231204001558057.png)
+
+
+
+### 双目运算符
+
+![image-20231204001740918](src/image-20231204001740918.png)
+
+
+
+
+
+## 运算符重载
+
+运算符重载（operator overloading）允许为类定义的对象定义自定义行为，这样就可以使用常规运算符来执行自定义类的操作。
+
+在 C++ 中，运算符重载（Operator Overloading）允许为自定义类型赋予运算符的特定行为。以下是运算符重载的核心规则、分类及示例：
+
+---
+
+### 一、基本规则
+1. **可重载的运算符**  
+   C++ 允许重载大部分运算符（如 `+`, `==`, `<<`, `[]`, `()` 等），但以下运算符**不可重载**：
+   - `::`（作用域解析）
+   - `.*`（成员指针访问）
+   - `.`（成员访问）
+   - `?:`（三目运算符）
+   - `sizeof`、`typeid` 等编译时操作符
+
+2. **重载形式**  
+   - **成员函数**：运算符的左操作数是当前类对象（如 `obj + 5`）。
+   - **非成员函数**（通常为友元函数）：运算符的左操作数非当前类对象（如 `5 + obj`）。
+
+3. **参数数量**  
+   - 一元运算符（如 `++`、`!`）接受 0 个参数（成员函数）或 1 个参数（非成员函数）。
+   - 二元运算符（如 `+`、`==`）接受 1 个参数（成员函数）或 2 个参数（非成员函数）。
+
+---
+
+### 二、常见运算符重载示例
+#### 1. 算术运算符（`+`, `-`, `*`, `/`）
+```cpp
+class Vector {
+public:
+    int x, y;
+
+    // 成员函数形式：实现 obj1 + obj2
+    Vector operator+(const Vector& other) const {
+        return {x + other.x, y + other.y};
+    }
+
+    // 友元函数形式：实现 5 * obj
+    friend Vector operator*(int scalar, const Vector& v) {
+        return {scalar * v.x, scalar * v.y};
+    }
+};
+
+// 使用：
+Vector v1{1, 2}, v2{3, 4};
+Vector v3 = v1 + v2;       // 成员函数调用
+Vector v4 = 2 * v1;        // 友元函数调用
+```
+
+#### 2. 比较运算符（`==`, `!=`, `<`）
+```cpp
+class Date {
+public:
+    int year, month, day;
+
+    bool operator==(const Date& other) const {
+        return year == other.year && month == other.month && day == other.day;
+    }
+
+    bool operator<(const Date& other) const {
+        if (year != other.year) return year < other.year;
+        if (month != other.month) return month < other.month;
+        return day < other.day;
+    }
+};
+
+// 使用：
+Date d1{2023, 10, 1}, d2{2023, 10, 2};
+if (d1 < d2) { /* ... */ }
+```
+
+#### 3. 输入/输出运算符（`<<`, `>>`）
+```cpp
+#include <iostream>
+class Student {
+public:
+    std::string name;
+    int age;
+
+    friend std::ostream& operator<<(std::ostream& os, const Student& s) {
+        os << "Name: " << s.name << ", Age: " << s.age;
+        return os;
+    }
+
+    friend std::istream& operator>>(std::istream& is, Student& s) {
+        is >> s.name >> s.age;
+        return is;
+    }
+};
+
+// 使用：
+Student s;
+std::cin >> s;     // 输入
+std::cout << s;    // 输出
+```
+
+#### 4. 下标运算符（`[]`）
+```cpp
+class IntArray {
+private:
+    int data[10];
+
+public:
+    // 返回引用以支持修改
+    int& operator[](int index) {
+        if (index < 0 || index >= 10) throw std::out_of_range("Invalid index");
+        return data[index];
+    }
+
+    // const 版本
+    const int& operator[](int index) const {
+        if (index < 0 || index >= 10) throw std::out_of_range("Invalid index");
+        return data[index];
+    }
+};
+
+// 使用：
+IntArray arr;
+arr[3] = 42;       // 调用非 const 版本
+int val = arr[3];  // 调用 const 版本
+```
+
+#### 5. 自增/自减运算符（`++`, `--`）
+```cpp
+class Counter {
+private:
+    int count;
+
+public:
+    // 前缀 ++（返回引用）
+    Counter& operator++() {
+        ++count;
+        return *this;
+    }
+
+    // 后缀 ++（int 参数占位符，返回值而非引用）
+    Counter operator++(int) {
+        Counter temp = *this;
+        ++count;
+        return temp;
+    }
+};
+
+// 使用：
+Counter c;
+++c;    // 前缀
+c++;    // 后缀
+```
+
+#### 6. 赋值运算符（`=`, `+=`）
+```cpp
+class String {
+private:
+    char* buffer;
+
+public:
+    // 拷贝赋值
+    String& operator=(const String& other) {
+        if (this != &other) {  // 防止自赋值
+            delete[] buffer;
+            buffer = new char[strlen(other.buffer) + 1];
+            strcpy(buffer, other.buffer);
+        }
+        return *this;
+    }
+
+    // += 运算符
+    String& operator+=(const String& other) {
+        // 拼接逻辑
+        return *this;
+    }
+};
+```
+
+---
+
+### 三、注意事项
+1. **保持语义一致性**  
+   - 例如，`operator+` 不应修改操作数，而是返回新对象。
+
+2. **处理自赋值**  
+   - 在赋值运算符中检查 `if (this != &other)`。
+
+3. **返回引用还是值**  
+   - 赋值类运算符（`=`, `+=`）返回引用以支持链式调用。
+   - 算术运算符返回新对象（值类型）。
+
+4. **友元 vs 成员函数**  
+   - 当运算符的左操作数不是当前类时（如 `5 + obj`），必须使用友元函数。
+
+---
+
+### 四、特殊运算符
+#### 1. 函数调用运算符 `()`
+```cpp
+class Adder {
+public:
+    int operator()(int a, int b) const {
+        return a + b;
+    }
+};
+
+// 使用：
+Adder add;
+int sum = add(3, 4);  // 类似函数调用
+```
+
+#### 2. 类型转换运算符
+```cpp
+class MyInt {
+private:
+    int value;
+
+public:
+    operator int() const {  // 允许隐式转换为 int
+        return value;
+    }
+};
+
+// 使用：
+MyInt obj{42};
+int x = obj;  // 隐式转换
+```
+
+---
+
+### 五、错误示例
+#### 1. 不返回引用导致链式调用失败
+```cpp
+// 错误：返回 void 导致无法链式调用
+void operator<<(std::ostream& os, const MyClass& obj) {
+    os << obj.data;
+}
+```
+
+#### 2. 未处理自赋值
+```cpp
+// 错误：未检查自赋值导致内存泄漏
+String& operator=(const String& other) {
+    delete[] buffer;  // 如果 other == this，buffer 已被删除
+    // ...
+}
+```
+
+---
+
+### 六、最佳实践
+1. **优先实现为成员函数**，除非需要处理左操作数为非类类型的情况。
+2. **避免过度使用运算符重载**，确保其行为符合直觉。
+3. **为成对运算符提供对称实现**（如 `==` 和 `!=`）。
+
+---
+
+### 总结
+运算符重载的核心是为自定义类型赋予直观的操作语义。重点在于：
+- 选择成员函数或友元函数的形式。
+- 正确处理返回值和参数。
+- 遵循语言习惯（如 `operator+` 不修改操作数）。
+
+
+
+# 1.文件
 
 ## 文件写入
 
@@ -188,7 +516,7 @@ int main()
 
 
 
-# 1.编译、链接
+# 2.编译、链接
 
 ## 链接
 
@@ -308,9 +636,7 @@ cout <<"" <<endl;
 
 在项目中，使用到了一个库的某个对象/函数，需要把这个库的头文件引入进来，这样才能在编译环节展开对应头文件然后找到对应使用的函数，最后才是链接到对应动态库上的函数。
 
-
-
-# 1.1 程序的组成
+## 1.1 程序的组成
 
 程序内存通常分为以下 **5 个核心段**：
 
@@ -326,7 +652,7 @@ cout <<"" <<endl;
 
 
 
-# 2.head files
+## 1.2.head files
 
 头文件保护符：
 
@@ -442,6 +768,37 @@ p++; //这是错误的，需要转换之后才能进行运算
 
 **1.unique_ptr:**
 
+- 构造
+
+  ```
+  std::unique_ptr<T> ptr(new T());       // 从原始指针构造
+  auto ptr = std::make_unique<T>(args);  // C++14 起推荐（安全高效）
+  ```
+
+- 移动语义（转移所有权）
+
+  ```
+  std::unique_ptr<T> ptr2 = std::move(ptr); // 所有权转移
+  ```
+
+- 释放资源
+
+  ```
+  ptr.reset();             // 释放对象，ptr 置空
+  ptr.reset(new T());      // 释放旧对象，管理新对象
+  T* raw = ptr.release();  // 释放所有权，返回原始指针（需手动管理）
+  ```
+
+- 访问对象
+
+  ```
+  T* raw = ptr.get();      // 获取原始指针（不释放所有权）
+  T& ref = *ptr;           // 解引用
+  ptr->method();           // 成员访问
+  ```
+
+  
+
 作用域指针，超出作用域时，会被销毁，然后调用delete
 
 【**warning**】unique_ptr不能够复制，一旦复制，当一个指针被释放，另一个指针会指向被释放的内存。所以叫做unique指针~独一无二的哈~
@@ -475,7 +832,51 @@ int main()
 }
 ```
 
+---
+
 **2.shared_ptr**
+
+- 构造：
+
+  ```c++
+  std::shared_ptr<T> ptr1(new T());      // 不推荐（可能内存泄漏）
+  auto ptr = std::make_shared<T>(args);  // 推荐（原子操作更高效）
+  std::shared_ptr<T> ptr2(ptr1);         // 拷贝构造（引用计数+1）
+  ```
+
+- 引用计数
+
+  ```c++
+  long count = ptr.use_count();  // 获取引用计数（调试用）
+  bool unique = (ptr.use_count() == 1); // 是否唯一持有者
+  ```
+
+- 管理与替换
+
+  ```
+  ptr.reset();        // 引用计数-1，若为0则销毁对象
+  ptr.reset(new T()); // 替换管理对象
+  ```
+
+- 访问对象
+
+  ```
+  T* raw = ptr.get(); // 获取原始指针
+  if (ptr) { ... }    // 检查是否为空
+  ```
+
+- 自定义删除器
+
+  ```
+  auto deleter = [](T* p) { delete p; };
+  std::unique_ptr<T, decltype(deleter)> ptr(new T(), deleter);
+  ```
+
+- 检查是否唯一
+
+  ```c++
+  if (sp.unique()) { /* 引用计数为1 */ } // C++20前可用
+  ```
 
 通过引用计数，可以跟踪指针有多少引用，一旦引用计数为0，那么就被删除了
 
@@ -519,6 +920,36 @@ int main()
 ---
 
 **3.weak_ptr**
+
+- 构造
+
+  ```
+  std::weak_ptr<T> weak(shared_ptr); // 从 shared_ptr 创建
+  ```
+
+- 检查有效性
+
+  ```
+  if (auto locked = weak.lock()) { 
+    // 对象存活，locked 是 shared_ptr
+  } else {
+    // 对象已被销毁
+  }
+  ```
+
+- 检查是否被销毁
+
+  ```
+  bool expired = weak.expired(); // 检查对象是否被销毁
+  ```
+
+- 提升为shared_ptr
+
+  ```
+  std::shared_ptr<T> sp = weak.lock(); // 尝试提升为 shared_ptr
+  ```
+
+  
 
 本身不拥有对象的所有权，也不会增加所指对象的引用计数，主要解决的是shared_ptr的**循环引用问题**，可以看成对shared_ptr的观察者。
 
@@ -1810,7 +2241,105 @@ public:
 
 一般使用const修饰的类中的函数表示这个函数不会修改类的其他成员。如果有一个类tensor实例化后使用了const修饰，那么在使用类的函数的时候，只能使用类的const修饰的函数
 
-# 虚函数与类的内存模型
+
+
+
+
+## 隐式转换与显式转换
+
+```cpp
+class Entity
+{
+public:
+	int m_age;
+	Entity(int age)
+		:m_age(age)
+		{}
+}
+
+int main()
+{
+	Entity a = 22;
+	// 此时会发生隐式转换
+	Entity b(20);
+	// 这样是显式转换
+}
+```
+
+但是，如果在构造函数前放一个`explicit`关键词，那么隐式转换`implicit`就会被屏蔽，从而使用显式的构造函数
+
+```
+class Entity
+{
+public:
+	int m_age;
+	explicit Entity(int age)
+		:m_age(age)
+		{}
+}
+
+int main()
+{
+	Entity a = 22; //error
+	// 此时隐式转换会错误
+	
+	Entity b(20);
+	// 只能用显式转换
+	Entity b = Entity(20);
+	// 这样也可以
+}
+```
+
+
+
+## 堆和栈(包含隐式转换的解释)
+
+1. **栈的作用域：{}，所以一旦离开了栈的作用域，作用域内的内容会消失**
+
+2. 使用new关键词新建的内容是在**堆**上，所以即使是离开{}的作用域，指针也会继续存在 
+
+**作用域指针(类)：**
+
+> 这一类指针同样在**作用域内生效**，尽管使用new申请了堆上的内存，**但是离开作用域时，对象也会析构** 
+>
+> **这就是智能指针哦**
+
+> ScopedPtr是一个智能指针，它包装了new操作符在堆上分配的动态对象，能够保证动态创建的对象在任何时候都可以被正确地删除。它与auto_ptr/unique_ptr类似，但是它不能被复制或赋值给其他指针
+>
+> e是一个ScopedPtr类型的变量，它指向一个Entity类的对象。当e离开作用域时（即大括号结束时），它会自动调用析构函数来删除指向的Entity对象。
+
+> ScopedPtr e = new Entity(); 这段话会执行以下步骤：（**发生隐式转换**，new返回指针，然后赋值给m_Ptr）
+>
+> 1. 使用new表达式在堆上分配一个Entity类的对象，并返回一个指向它的指针。
+> 2. 调用ScopedPtr的构造函数，将这个指针作为参数传递，并将它赋值给m_Ptr成员变量。
+> 3. 创建一个ScopedPtr类型的变量e，它包装了这个指针，并管理它的生命周期
+
+```cpp
+class ScopedPtr
+{
+private:
+	Enitty* m_Ptr;
+public:
+	ScopedPtr(Entity* ptr)
+		:m_Ptr(ptr)
+		{}
+	~ScopedPtr()
+	{
+        delete m_Ptr;
+    }
+};
+
+int main()
+{
+	{
+	ScopedPtr e = new Entity();
+	}
+}
+```
+
+
+
+# 7.1虚函数与类的内存模型
 
 ## 概念
 
@@ -2598,97 +3127,7 @@ int main()
 
 
 
-# 隐式转换
 
-```cpp
-class Entity
-{
-public:
-	int m_age;
-	Entity(int age)
-		:m_age(age)
-		{}
-}
-
-int main()
-{
-	Entity a = 22;
-	// 此时会发生隐式转换
-	Entity b(20);
-	// 这样是显式转换
-}
-```
-
-但是，如果在构造函数前放一个`explicit`关键词，那么隐式转换`implicit`就会被屏蔽，从而使用显式的构造函数
-
-```
-class Entity
-{
-public:
-	int m_age;
-	explicit Entity(int age)
-		:m_age(age)
-		{}
-}
-
-int main()
-{
-	Entity a = 22; //error
-	// 此时隐式转换会错误
-	
-	Entity b(20);
-	// 只能用显式转换
-	Entity b = Entity(20);
-	// 这样也可以
-}
-```
-
-
-
-# 堆和栈(包含隐式转换的解释)
-
-1. **栈的作用域：{}，所以一旦离开了栈的作用域，作用域内的内容会消失**
-
-2. 使用new关键词新建的内容是在**堆**上，所以即使是离开{}的作用域，指针也会继续存在 
-
-**作用域指针(类)：**
-
-> 这一类指针同样在**作用域内生效**，尽管使用new申请了堆上的内存，**但是离开作用域时，对象也会析构** 
->
-> **这就是智能指针哦**
-
-> ScopedPtr是一个智能指针，它包装了new操作符在堆上分配的动态对象，能够保证动态创建的对象在任何时候都可以被正确地删除。它与auto_ptr/unique_ptr类似，但是它不能被复制或赋值给其他指针
->
-> e是一个ScopedPtr类型的变量，它指向一个Entity类的对象。当e离开作用域时（即大括号结束时），它会自动调用析构函数来删除指向的Entity对象。
-
-> ScopedPtr e = new Entity(); 这段话会执行以下步骤：（**发生隐式转换**，new返回指针，然后赋值给m_Ptr）
->
-> 1. 使用new表达式在堆上分配一个Entity类的对象，并返回一个指向它的指针。
-> 2. 调用ScopedPtr的构造函数，将这个指针作为参数传递，并将它赋值给m_Ptr成员变量。
-> 3. 创建一个ScopedPtr类型的变量e，它包装了这个指针，并管理它的生命周期
-
-```cpp
-class ScopedPtr
-{
-private:
-	Enitty* m_Ptr;
-public:
-	ScopedPtr(Entity* ptr)
-		:m_Ptr(ptr)
-		{}
-	~ScopedPtr()
-	{
-        delete m_Ptr;
-    }
-};
-
-int main()
-{
-	{
-	ScopedPtr e = new Entity();
-	}
-}
-```
 
 
 
@@ -3093,290 +3532,41 @@ int main() {
 
 
 
-# 操作符与重载
+# 9.c++并发编程
 
-## 操作符
-
-### 单目运算符
-
-![image-20231204001558057](src/image-20231204001558057.png)
-
-
-
-### 双目运算符
-
-![image-20231204001740918](src/image-20231204001740918.png)
-
-
-
-
-
-## 运算符重载
-
-运算符重载（operator overloading）允许为类定义的对象定义自定义行为，这样就可以使用常规运算符来执行自定义类的操作。
-
-在 C++ 中，运算符重载（Operator Overloading）允许为自定义类型赋予运算符的特定行为。以下是运算符重载的核心规则、分类及示例：
+- 多线程：并行计算
+- 异步：并发执行
 
 ---
 
-### 一、基本规则
-1. **可重载的运算符**  
-   C++ 允许重载大部分运算符（如 `+`, `==`, `<<`, `[]`, `()` 等），但以下运算符**不可重载**：
-   - `::`（作用域解析）
-   - `.*`（成员指针访问）
-   - `.`（成员访问）
-   - `?:`（三目运算符）
-   - `sizeof`、`typeid` 等编译时操作符
+假设你现在要做两件事：**烧一壶水** 和 **洗茶壶、拿茶叶**。
 
-2. **重载形式**  
-   - **成员函数**：运算符的左操作数是当前类对象（如 `obj + 5`）。
-   - **非成员函数**（通常为友元函数）：运算符的左操作数非当前类对象（如 `5 + obj`）。
+- **方式一：单线程同步 (Synchronous)** 你先站在电水壶前，盯着它，直到水烧开 (阻塞等待)。然后，你才去洗茶壶、拿茶叶。最后泡茶。整个过程你必须一件一件按顺序做，在等水开的时候，你什么也干不了。
 
-3. **参数数量**  
-   - 一元运算符（如 `++`、`!`）接受 0 个参数（成员函数）或 1 个参数（非成员函数）。
-   - 二元运算符（如 `+`、`==`）接受 1 个参数（成员函数）或 2 个参数（非成员函数）。
+  > 这就是**同步**，必须等待一个任务完成后才能开始下一个。
+
+- **方式二：多线程 (Multithreading)** 你觉得一个人太慢，于是叫来你弟弟帮忙。你负责专门烧水，你弟弟负责专门洗茶壶、拿茶叶。你们**两个人同时开始干活**。水烧开的同时，茶具也准备好了，然后你俩一起把茶泡好。
+
+  > 这就是**多线程**。核心是**增加人手（线程）**，让多个任务**真正地并行执行**。它的目标是“缩短完成所有任务的总时间”。
+
+- **方式三：单线程异步 (Asynchronous)** 还是只有你一个人。你先把电水壶插上电，按下开关（发起一个耗时任务），然后你**不站在那里等**，而是立刻转身去洗茶壶、拿茶叶（执行其他任务）。等你把茶具准备好，水壶“嘀”的一声响了（任务完成的通知），你再过去倒水泡茶。
 
 ---
 
-### 二、常见运算符重载示例
-#### 1. 算术运算符（`+`, `-`, `*`, `/`）
-```cpp
-class Vector {
-public:
-    int x, y;
+技术层面的区别
 
-    // 成员函数形式：实现 obj1 + obj2
-    Vector operator+(const Vector& other) const {
-        return {x + other.x, y + other.y};
-    }
+| 特性         | 多线程 (Multithreading)                                      | 异步 (Asynchronous)                                          |
+| ------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| **核心目标** | **并行计算 (Parallelism)** <br> 让多个任务**同时运行**，充分利用多核CPU的计算能力。 | **并发处理 (Concurrency)** <br> 避免因等待（尤其是I/O）而**阻塞**，提高程序在单位时间内的任务处理能力。 |
+| **本质**     | **增加执行单元（工人）** <br> 是一种**资源密集型**的解决方案，通过增加线程来同时处理多个任务。 | **优化调度流程（工作流）** <br> 是一种**任务调度**的模式，通过事件循环和回调/Future等机制，让单个线程在等待时能去处理其他任务。 |
+| **实现层面** | 通常由**操作系统**负责线程的创建、管理和调度。线程是操作系统能够进行运算调度的最小单位。 | 通常由**程序/语言层面**的事件循环（Event Loop）机制实现。可以在单线程上实现，也可以在多线程上实现。 |
+| **资源开销** | **高** <br> 每个线程都需要独立的栈空间和内核资源，线程创建和上下文切换有较大开销。 | **低** <br> 通常在单线程或少量线程中运行，任务切换（如执行回调）的开销远小于线程切换。 |
+| **适用场景** | **CPU密集型任务** <br> 如科学计算、视频编解码、大规模数据处理。需要强大的并行计算能力来缩短执行时间。 | **I/O密集型任务** <br> 如网络请求、文件读写、数据库操作。任务的大部分时间都在等待I/O返回，CPU处于空闲状态。 |
+| **编程模型** | **复杂** <br> 需要处理线程间的同步、资源共享、锁（死锁、活锁）、竞态条件等问题。 | **相对复杂** <br> 逻辑是非线性的，可能导致“回调地狱”(Callback Hell)，但现代编程语言的`async/await`语法糖极大地改善了这一点。 |
 
-    // 友元函数形式：实现 5 * obj
-    friend Vector operator*(int scalar, const Vector& v) {
-        return {scalar * v.x, scalar * v.y};
-    }
-};
+# 9.1多线程
 
-// 使用：
-Vector v1{1, 2}, v2{3, 4};
-Vector v3 = v1 + v2;       // 成员函数调用
-Vector v4 = 2 * v1;        // 友元函数调用
-```
-
-#### 2. 比较运算符（`==`, `!=`, `<`）
-```cpp
-class Date {
-public:
-    int year, month, day;
-
-    bool operator==(const Date& other) const {
-        return year == other.year && month == other.month && day == other.day;
-    }
-
-    bool operator<(const Date& other) const {
-        if (year != other.year) return year < other.year;
-        if (month != other.month) return month < other.month;
-        return day < other.day;
-    }
-};
-
-// 使用：
-Date d1{2023, 10, 1}, d2{2023, 10, 2};
-if (d1 < d2) { /* ... */ }
-```
-
-#### 3. 输入/输出运算符（`<<`, `>>`）
-```cpp
-#include <iostream>
-class Student {
-public:
-    std::string name;
-    int age;
-
-    friend std::ostream& operator<<(std::ostream& os, const Student& s) {
-        os << "Name: " << s.name << ", Age: " << s.age;
-        return os;
-    }
-
-    friend std::istream& operator>>(std::istream& is, Student& s) {
-        is >> s.name >> s.age;
-        return is;
-    }
-};
-
-// 使用：
-Student s;
-std::cin >> s;     // 输入
-std::cout << s;    // 输出
-```
-
-#### 4. 下标运算符（`[]`）
-```cpp
-class IntArray {
-private:
-    int data[10];
-
-public:
-    // 返回引用以支持修改
-    int& operator[](int index) {
-        if (index < 0 || index >= 10) throw std::out_of_range("Invalid index");
-        return data[index];
-    }
-
-    // const 版本
-    const int& operator[](int index) const {
-        if (index < 0 || index >= 10) throw std::out_of_range("Invalid index");
-        return data[index];
-    }
-};
-
-// 使用：
-IntArray arr;
-arr[3] = 42;       // 调用非 const 版本
-int val = arr[3];  // 调用 const 版本
-```
-
-#### 5. 自增/自减运算符（`++`, `--`）
-```cpp
-class Counter {
-private:
-    int count;
-
-public:
-    // 前缀 ++（返回引用）
-    Counter& operator++() {
-        ++count;
-        return *this;
-    }
-
-    // 后缀 ++（int 参数占位符，返回值而非引用）
-    Counter operator++(int) {
-        Counter temp = *this;
-        ++count;
-        return temp;
-    }
-};
-
-// 使用：
-Counter c;
-++c;    // 前缀
-c++;    // 后缀
-```
-
-#### 6. 赋值运算符（`=`, `+=`）
-```cpp
-class String {
-private:
-    char* buffer;
-
-public:
-    // 拷贝赋值
-    String& operator=(const String& other) {
-        if (this != &other) {  // 防止自赋值
-            delete[] buffer;
-            buffer = new char[strlen(other.buffer) + 1];
-            strcpy(buffer, other.buffer);
-        }
-        return *this;
-    }
-
-    // += 运算符
-    String& operator+=(const String& other) {
-        // 拼接逻辑
-        return *this;
-    }
-};
-```
-
----
-
-### 三、注意事项
-1. **保持语义一致性**  
-   - 例如，`operator+` 不应修改操作数，而是返回新对象。
-
-2. **处理自赋值**  
-   - 在赋值运算符中检查 `if (this != &other)`。
-
-3. **返回引用还是值**  
-   - 赋值类运算符（`=`, `+=`）返回引用以支持链式调用。
-   - 算术运算符返回新对象（值类型）。
-
-4. **友元 vs 成员函数**  
-   - 当运算符的左操作数不是当前类时（如 `5 + obj`），必须使用友元函数。
-
----
-
-### 四、特殊运算符
-#### 1. 函数调用运算符 `()`
-```cpp
-class Adder {
-public:
-    int operator()(int a, int b) const {
-        return a + b;
-    }
-};
-
-// 使用：
-Adder add;
-int sum = add(3, 4);  // 类似函数调用
-```
-
-#### 2. 类型转换运算符
-```cpp
-class MyInt {
-private:
-    int value;
-
-public:
-    operator int() const {  // 允许隐式转换为 int
-        return value;
-    }
-};
-
-// 使用：
-MyInt obj{42};
-int x = obj;  // 隐式转换
-```
-
----
-
-### 五、错误示例
-#### 1. 不返回引用导致链式调用失败
-```cpp
-// 错误：返回 void 导致无法链式调用
-void operator<<(std::ostream& os, const MyClass& obj) {
-    os << obj.data;
-}
-```
-
-#### 2. 未处理自赋值
-```cpp
-// 错误：未检查自赋值导致内存泄漏
-String& operator=(const String& other) {
-    delete[] buffer;  // 如果 other == this，buffer 已被删除
-    // ...
-}
-```
-
----
-
-### 六、最佳实践
-1. **优先实现为成员函数**，除非需要处理左操作数为非类类型的情况。
-2. **避免过度使用运算符重载**，确保其行为符合直觉。
-3. **为成对运算符提供对称实现**（如 `==` 和 `!=`）。
-
----
-
-### 总结
-运算符重载的核心是为自定义类型赋予直观的操作语义。重点在于：
-- 选择成员函数或友元函数的形式。
-- 正确处理返回值和参数。
-- 遵循语言习惯（如 `operator+` 不修改操作数）。
-
-
-
-# 多线程
-
-![img](src/v2-76e5e48c9c1d60f9868452cfc9ce7d85_720w.webp)
+![image-20250908011152183](src/image-20250908011152183.png)
 
 ## 定义
 
@@ -3952,7 +4142,230 @@ public:
 
 
 
-# STL
+
+
+## 信号量
+
+信号量是多线程中的同步原语，**其核心功能就是在资源不可用时阻塞线程**
+
+---
+
+信号量时一个非负整数计数器，用于控制多个线程对优先数量共享资源的访问，主要有两个原子操作：
+
+1. `acquire`：
+   - 尝试获得一个许可证
+   - 如果信号量的计数器大于0，那么就减1，然后线程继续执行
+   - 如果信号量的计数器等于0，那么就没有许可证，线程会被阻塞，直到其他线程释放许可证。
+2. `release`：
+   - 释放一个许可证
+   - 将信号量的计数器加1
+   - 如果此时有其他的线程因为等待该信号量而被阻塞，那么其中一个线程将被唤醒
+
+---
+
+一个绝佳的比喻：停车场
+
+把一个信号量想象成一个停车场的入口处的电子显示牌，上面写着“**剩余车位：N**”。
+
+- **信号量的初始值**：停车场的总车位数（`N`）。
+- **`acquire()` 操作**：一辆车想要进入停车场。
+  - 如果 `N > 0`，显示牌数字减1，车辆进入。
+  - 如果 `N = 0`，入口栏杆不会抬起，车辆必须在外面排队等待（线程被阻塞）。
+- **`release()` 操作**：一辆车从停车场离开。
+  - 显示牌数字加1。
+  - 如果外面有车在排队等待，栏杆抬起，让排在最前面的车进入（唤醒一个被阻塞的线程）。
+
+---
+
+### 1. C++20中的信号量
+
+在C++20标准之前，C++本身没有提供标准的信号量实现，开发者需要依赖操作系统API（如POSIX的`sem_t`）或第三方库（如Boost）。**自C++20起，信号量成为标准库的一部分**，位于`<semaphore>`头文件中。
+
+C++20提供了两种信号量：
+
+1. **`std::counting_semaphore<N>`**:
+   - 通用信号量，计数器可以是一个任意的非负数。
+   - 这就像上面提到的停车场，可以管理多个资源。`N` 是一个模板参数，代表了计数器的最大值。
+   - 构造时需要传入初始的许可证数量。
+2. **`std::binary_semaphore`**:
+   - 一种特殊的信号量，其计数器的值只能是 `0` 或 `1`。
+   - 功能上非常类似于互斥锁（`std::mutex`），用于保护**单个共享资源**，确保同一时间只有一个线程可以访问。
+   - **与Mutex的关键区别**：互斥锁要求**同一个线程**必须执行 `lock()` 和 `unlock()`。而二进制信号量允许一个线程 `acquire()`，而由**另一个线程** `release()`，这在某些复杂的同步场景（如生产者-消费者）中非常有用。
+
+---
+
+### 2. C++代码示例
+
+下面的代码模拟了一个**数据库连接池**的场景。假设我们的连接池中只有 **3** 个可用的数据库连接。我们启动10个线程，每个线程都尝试获取连接并执行工作。
+
+```c++
+#include <iostream>
+#include <thread>
+#include <vector>
+#include <semaphore>
+#include <chrono>
+
+// 假设我们的连接池最多只有3个连接
+constexpr int MAX_CONNECTIONS = 3;
+
+// 创建一个计数信号量，初始许可证数量为3
+std::counting_semaphore<MAX_CONNECTIONS> connection_pool(MAX_CONNECTIONS);
+
+void use_connection(int thread_id) {
+    std::cout << "线程 " << thread_id << " 正在等待数据库连接...\n";
+
+    // 1. acquire: 尝试获取一个连接许可证，如果池满则阻塞
+    connection_pool.acquire();
+
+    std::cout << "线程 " << thread_id << " 成功获取连接，正在执行工作...\n";
+    // 模拟使用连接进行耗时操作
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+
+    std::cout << "线程 " << thread_id << " 工作完成，释放连接。\n";
+    
+    // 2. release: 将连接许可证归还给池子
+    connection_pool.release();
+}
+
+int main() {
+    std::vector<std::thread> threads;
+    // 启动10个线程，但连接池只有3个名额
+    for (int i = 0; i < 10; ++i) {
+        threads.emplace_back(use_connection, i);
+    }
+
+    for (auto& t : threads) {
+        t.join();
+    }
+
+    return 0;
+}
+```
+
+**运行分析：** 当你运行这个程序，你会立刻看到3个线程成功获取连接并开始工作。其余的7个线程会打印“正在等待...”然后被阻塞。当最初的3个线程中有任何一个完成工作并调用`release()`后，一个等待中的线程就会立即被唤醒，`acquire()`成功，并开始工作。整个过程，同时工作的线程数量永远不会超过3个。
+
+
+
+
+
+
+
+# 9.2异步
+
+**异步的设计理念是：不阻塞当前线程，去执行其他任务。**
+
+## std::future
+
+`std::future` 是C++标准库中的一个工具，它代表了一个**异步操作**（即在后台运行的任务）的最终结果。你可以把它想象成一张**“提货单”**或者一个**“承诺凭证”**。当你启动一个异步任务时，你不会立即得到结果，而是会立刻拿到这张“提货单”。然后，你可以拿着它在未来的某个时刻去提取任务完成后的真正结果。
+
+这个机制使得主线程不必在原地等待任务完成，可以继续执行其他工作，只在需要结果的时候才去获取，从而提高了程序的效率和响应性。
+
+你不能直接创建 `std::future`，而是通过以下三种主要方式从一个异步任务中获得它：
+
+----
+
+**获取方式**
+
+### 1. `std::async`
+
+这是最简单的异步运行一个函数的方式。`std::async` 会启动一个函数（可能在一个新线程中），并立即返回一个 `std::future` 对象，这个对象最终将持有该函数的返回值。
+
+```c++
+#include <iostream>
+#include <future>
+#include <chrono>
+
+// 一个耗时的计算函数
+int heavy_calculation() {
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    return 100;
+}
+
+int main() {
+    // 启动计算任务，并获取一个指向其结果的 future
+    std::future<int> result_future = std::async(std::launch::async, heavy_calculation);
+
+    std::cout << "计算正在后台运行，主线程可以做点别的事情...\n";
+
+    // 调用 .get() 等待并获取结果，如果没有完成才会阻塞线程。在get之前执行其他任务是不会阻塞的
+    int result = result_future.get();
+    std::cout << "计算结果是: " << result << std::endl;
+}
+```
+
+
+
+### 2. `std::packaged_task`
+
+这个对象可以将一个函数包装起来，以便稍后执行。你可以在任务真正运行前，就从 `packaged_task` 中获取 `std::future`。这对于更复杂的场景（如线程池）非常有用，因为它将“任务的创建”和“任务的执行”分离开来。
+
+```c++
+#include <iostream>
+#include <future>
+#include <thread>
+
+int main() {
+    // 将一个 lambda 函数包装进 packaged_task
+    std::packaged_task<int()> task([]{ return 200; });
+
+    // 在任务运行前就获取 future
+    std::future<int> result_future = task.get_future();
+
+    // 在一个新线程上运行这个任务
+    std::thread t(std::move(task));
+    t.detach(); // 分离线程，让它在后台独立运行
+
+    // 获取结果
+    std::cout << "计算结果是: " << result_future.get() << std::endl;
+}
+```
+
+
+
+### 3. `std::promise`
+
+`std::promise` 对象可以让你**手动地**设置一个值（或一个异常），而这个值可以被一个与之关联的 `std::future` 获取。这让你能更精细地控制结果在何时变为可用。
+
+```
+#include <iostream>
+#include <future>
+#include <thread>
+#include <chrono>
+
+// 这个函数在稍后设置一个值
+void set_value_later(std::promise<int> p) {
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    p.set_value(300); // 兑现承诺
+}
+
+int main() {
+    std::promise<int> my_promise;
+    std::future<int> result_future = my_promise.get_future();
+
+    std::thread t(set_value_later, std::move(my_promise));
+    t.detach();
+
+    std::cout << "正在等待承诺被兑现...\n";
+    std::cout << "计算结果是: " << result_future.get() << std::endl;
+}
+```
+
+------
+
+
+
+### 如何使用 `std::future`
+
+`std::future` 对象有几个关键的成员函数来与异步结果进行交互：
+
+- **`get()`**: 等待任务完成，然后返回其结果。**这个函数只能被调用一次**。在 `get()` 被调用后，`future` 对象会变为无效状态。
+- **`wait()`**: 阻塞当前线程，直到结果可用，但它**不会**获取结果。之后你仍然可以调用 `get()` 来获取它。
+- **`wait_for()`**: 等待指定的时长。它会返回一个状态，用以表明是任务完成了还是等待超时了。
+- **`valid()`**: 检查 `future` 是否仍然与一个有效的结果关联。在 `get()` 被调用后，或者 `future` 被移动（move）后，它会返回 `false`。
+
+
+
+# 10.STL
 
 ## std::string
 
@@ -4064,114 +4477,6 @@ MyClass obj2 = createObject();  // Move constructor
 
 
 
-## std::future
-
-`std::future` 是C++标准库中的一个工具，它代表了一个**异步操作**（即在后台运行的任务）的最终结果。你可以把它想象成一张**“提货单”**或者一个**“承诺凭证”**。当你启动一个异步任务时，你不会立即得到结果，而是会立刻拿到这张“提货单”。然后，你可以拿着它在未来的某个时刻去提取任务完成后的真正结果。
-
-这个机制使得主线程不必在原地等待任务完成，可以继续执行其他工作，只在需要结果的时候才去获取，从而提高了程序的效率和响应性。
-
-你不能直接创建 `std::future`，而是通过以下三种主要方式从一个异步任务中获得它：
-
-----
-
-**获取方式**
-
-### 1. `std::async`
-
-这是最简单的异步运行一个函数的方式。`std::async` 会启动一个函数（可能在一个新线程中），并立即返回一个 `std::future` 对象，这个对象最终将持有该函数的返回值。
-
-```
-#include <iostream>
-#include <future>
-#include <chrono>
-
-// 一个耗时的计算函数
-int heavy_calculation() {
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-    return 100;
-}
-
-int main() {
-    // 启动计算任务，并获取一个指向其结果的 future
-    std::future<int> result_future = std::async(std::launch::async, heavy_calculation);
-
-    std::cout << "计算正在后台运行，主线程可以做点别的事情...\n";
-
-    // 调用 .get() 等待并获取结果
-    int result = result_future.get();
-    std::cout << "计算结果是: " << result << std::endl;
-}
-```
-
-
-
-### 2. `std::packaged_task`
-
-这个对象可以将一个函数包装起来，以便稍后执行。你可以在任务真正运行前，就从 `packaged_task` 中获取 `std::future`。这对于更复杂的场景（如线程池）非常有用，因为它将“任务的创建”和“任务的执行”分离开来。
-
-```
-#include <iostream>
-#include <future>
-#include <thread>
-
-int main() {
-    // 将一个 lambda 函数包装进 packaged_task
-    std::packaged_task<int()> task([]{ return 200; });
-
-    // 在任务运行前就获取 future
-    std::future<int> result_future = task.get_future();
-
-    // 在一个新线程上运行这个任务
-    std::thread t(std::move(task));
-    t.detach(); // 分离线程，让它在后台独立运行
-
-    // 获取结果
-    std::cout << "计算结果是: " << result_future.get() << std::endl;
-}
-```
-
-
-
-### 3. `std::promise`
-
-`std::promise` 对象可以让你**手动地**设置一个值（或一个异常），而这个值可以被一个与之关联的 `std::future` 获取。这让你能更精细地控制结果在何时变为可用。
-
-```
-#include <iostream>
-#include <future>
-#include <thread>
-#include <chrono>
-
-// 这个函数在稍后设置一个值
-void set_value_later(std::promise<int> p) {
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-    p.set_value(300); // 兑现承诺
-}
-
-int main() {
-    std::promise<int> my_promise;
-    std::future<int> result_future = my_promise.get_future();
-
-    std::thread t(set_value_later, std::move(my_promise));
-    t.detach();
-
-    std::cout << "正在等待承诺被兑现...\n";
-    std::cout << "计算结果是: " << result_future.get() << std::endl;
-}
-```
-
-------
-
-
-
-### 如何使用 `std::future`
-
-`std::future` 对象有几个关键的成员函数来与异步结果进行交互：
-
-- **`get()`**: 等待任务完成，然后返回其结果。**这个函数只能被调用一次**。在 `get()` 被调用后，`future` 对象会变为无效状态。
-- **`wait()`**: 阻塞当前线程，直到结果可用，但它**不会**获取结果。之后你仍然可以调用 `get()` 来获取它。
-- **`wait_for()`**: 等待指定的时长。它会返回一个状态，用以表明是任务完成了还是等待超时了。
-- **`valid()`**: 检查 `future` 是否仍然与一个有效的结果关联。在 `get()` 被调用后，或者 `future` 被移动（move）后，它会返回 `false`。
 
 
 
@@ -4203,7 +4508,60 @@ std::accumulate(nums.begin()+i, nums.begin()+j+1,0);
 
 
 
-# 容器
+# 11.容器
+
+## 总览
+
+### 顺序容器（Sequential Containers）
+
+顺序容器中的元素按照**线性顺序**排列，每个元素有特定的位置（通过下标或迭代器访问）。
+
+|      容器类型      |      头文件      |                             特点                             |              适用场景              |
+| :----------------: | :--------------: | :----------------------------------------------------------: | :--------------------------------: |
+|    **`vector`**    |    `<vector>`    | 动态数组，支持快速随机访问；尾部插入/删除高效，中间操作低效  |  需要随机访问、频繁尾部操作的场景  |
+|    **`deque`**     |    `<deque>`     |    双端队列，支持头尾高效插入/删除；随机访问比vector稍慢     | 需要频繁在两端操作的场景（如队列） |
+|     **`list`**     |     `<list>`     |   双向链表，任意位置插入/删除高效（O(1)）；不支持随机访问    |   需要频繁在中间插入/删除的场景    |
+| **`forward_list`** | `<forward_list>` |       单向链表（C++11），内存占用更小；只支持单向遍历        |     内存敏感场景，只需单向操作     |
+|    **`array`**     |    `<array>`     | 固定大小数组（C++11），比原生数组更安全（支持迭代器、STL算法） |       需要固定大小容器的场景       |
+|    **`string`**    |    `<string>`    |      类似`vector<char>`，专为字符串设计，支持字符串操作      |              文本处理              |
+
+**关键特性：**
+
+- 元素位置由插入顺序决定
+- 支持顺序访问（迭代器遍历）
+- 部分支持随机访问（`vector`, `deque`, `array`）
+
+------
+
+### 🔀 非顺序容器（Non-sequential Containers）
+
+非顺序容器中的元素**没有严格物理顺序**，通过键（Key）或哈希值组织元素。
+
+#### A. 关联容器（Associative Containers）
+
+基于**红黑树**实现，元素按键**有序存储**（默认升序）。
+
+|    容器类型    | 头文件  |            特点            |         适用场景         |
+| :------------: | :-----: | :------------------------: | :----------------------: |
+|   **`set`**    | `<set>` |    唯一键集合，自动排序    |  需要有序唯一元素的集合  |
+| **`multiset`** | `<set>` | 允许重复键的集合，自动排序 |    允许重复的有序集合    |
+|   **`map`**    | `<map>` |  键值对集合，键唯一且排序  |  字典式数据（如配置项）  |
+| **`multimap`** | `<map>` |   允许重复键的键值对集合   | 一键多值映射（如电话簿） |
+
+#### B. 无序关联容器（Unordered Associative Containers）
+
+基于**哈希表**实现（C++11），元素**无序存储**。
+
+|         容器类型         |      头文件       |           特点           |        适用场景        |
+| :----------------------: | :---------------: | :----------------------: | :--------------------: |
+|   **`unordered_set`**    | `<unordered_set>` |      唯一键哈希集合      |    快速查找唯一元素    |
+| **`unordered_multiset`** | `<unordered_set>` |   允许重复键的哈希集合   |  快速查找（允许重复）  |
+|   **`unordered_map`**    | `<unordered_map>` |   键值对哈希表，键唯一   | 快速键值查找（如缓存） |
+| **`unordered_multimap`** | `<unordered_map>` | 允许重复键的键值对哈希表 |    一键多值快速查找    |
+
+
+
+
 
 ## vector
 
@@ -4877,7 +5235,7 @@ stk.
 
 
 
-# boost
+# 12.boost
 
 ## serialization
 
@@ -5006,7 +5364,7 @@ int main()
 
 
 
-# PYTHON
+# 13.PYTHON
 
 ## 配置
 
