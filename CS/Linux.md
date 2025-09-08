@@ -1,4 +1,4 @@
-# WSL配置
+# 1.WSL配置
 
 ## 设置内存和swap
 
@@ -14,9 +14,9 @@ localhostForwarding=true
 
 即可设置内存为20G，设置交换内存为20G
 
-# Linux
 
-## 解压缩相关
+
+# 2.解压缩相关
 
 ### 解压
 
@@ -32,40 +32,11 @@ tar -jcvf [文件名].tar.bz2 [文件目录] //打包成.bz2文件
 tar -zcvf [文件名].tar.gz [文件目录] //打包成.gz文件
 ```
 
-## 编译
-
-### **动态库编译：**
-
-```
-g++ main.cpp -lmath -L/usr/local/lib -o main
-//-l指定库  -o指定输出  -L指定路径
-```
-
-**编译opencv：**
-
-```
-g++ main.cpp -o exam -I/home/sophda/include -L/home/sophda/lib -lopencv_imgcodecs  -lopencv_imgproc -lopencv_core -ldl -lm -lpthread -lrt
-```
-
-```
- g++ main.cpp -o exam -I/lib/include -Wl,-rpath,/lib/lib -lopencv_imgcodecs  -lopencv_imgproc -lopencv_core -ldl -lm -lpthread -lrt
-```
-
-### **静态库编译：**
-
-```
-g++ main.cpp -static -o exam -L/home/cvlib -mfpu=neon -mfloat-abi=hard  -lopencv_imgcodecs  -lopencv_imgproc -lopencv_core -ldl -lm -lpthread -lrt
-```
-
-**交叉编译：（静态）**
-
-```
-arm-linux-gnueabi-g++ main.cpp -o exam -static -I/home/sophyda/opencv-3.2.0/arm-install/include -L/home/sophyda/opencv-3.2.0/arm-install/lib -lopencv_imgcodecs  -lopencv_imgproc -lopencv_core -ldl -lm -lpthread -lrt
-```
 
 
 
-# 命令
+
+# 3.命令
 
 ## 设置环境变量
 
@@ -426,9 +397,332 @@ umask 077
 
 
 
+## 分区文件
+
+#### 第一步：识别目标磁盘和分区
+
+首先，你需要找出要修改的分区所在的磁盘。以 root 用户或使用 `sudo` 运行以下命令来列出所有磁盘及其分区表：
+
+Bash
+
+```
+sudo fdisk -l
+```
+
+在输出中找到你的目标磁盘（例如 `/dev/sda`, `/dev/sdb`, `/dev/nvme0n1` 等）和要修改的分区号。
+
+你也可以使用 `lsblk` 或 `swapon --show` 来辅助识别。`swapon --show` 会列出当前已激活的交换空间，可以帮你确认是否已经存在活动的交换分区。
+
+**示例输出 `fdisk -l`:**
+
+```
+Disk /dev/sda: 238.47 GiB, 256060514304 bytes, 500118192 sectors
+...
+Device         Boot   Start       End   Sectors   Size Id Type
+/dev/sda1        * 2048   1050623   1048576   512M ef EFI (FAT-12/16/32)
+/dev/sda2           1050624 483526655 482476032 230.1G 83 Linux
+/dev/sda3         483526656 500117503  16590848   7.9G 83 Linux  <-- 假设我们要将这个分区改为Swap
+```
+
+在这个例子中，我们假设要将 `/dev/sda3` 的类型从 `83 (Linux)` 改为 `82 (Linux swap)`。
+
+#### 第二步：启动 fdisk 工具
+
+使用 `fdisk` 命令进入对目标磁盘的交互式操作模式。请确保你指定的是整个磁盘设备，而不是分区（例如，使用 `/dev/sda` 而不是 `/dev/sda3`）。
+
+Bash
+
+```
+sudo fdisk /dev/sda
+```
+
+执行后，你将进入 `fdisk` 的命令提示符界面：
+
+```
+Welcome to fdisk (util-linux 2.34).
+Changes will remain in memory only, until you decide to write them.
+Be careful before using the write command.
+
+Command (m for help):
+```
+
+#### 第三步：更改分区类型 (使用 't' 命令)
+
+1. 在 `fdisk` 提示符下，输入 `t` 并按回车。这个命令用于更改分区的系统 ID。
+
+   ```
+   Command (m for help): t
+   ```
+
+2. `fdisk` 会要求你选择要修改的分区号。在我们的例子中，是分区 `3`。输入 `3` 并按回车。
+
+   ```
+   Partition number (1-3, default 3): 3
+   ```
+
+3. 接下来，`fdisk` 会要求你输入新的分区类型的十六进制代码。对于 Linux Swap，代码是 `82`。输入 `82` 并按回车。
+
+   ```
+   Hex code (type L to list all codes): 82
+   ```
+
+   如果你不确定代码，可以输入 `L` 来查看所有支持的类型代码列表。
+
+4. 更改成功后，`fdisk` 会显示确认信息。
+
+   ```
+   Changed type of partition 'Linux' to 'Linux swap / Solaris'.
+   ```
+
+#### 第四步：验证并保存更改
+
+1. **验证更改 (可选但推荐)** 在保存之前，输入 `p` 命令来打印当前的分区表，检查 `/dev/sda3` 的 `Type` 是否已经变成了 `Linux swap / Solaris`。
+
+   ```
+   Command (m for help): p
+   ```
+
+   **示例输出 `p`:**
+
+   ```
+   Disk /dev/sda: 238.47 GiB, 256060514304 bytes, 500118192 sectors
+   ...
+   Device         Boot   Start       End   Sectors   Size Id Type
+   /dev/sda1        * 2048   1050623   1048576   512M ef EFI (FAT-12/16/32)
+   /dev/sda2           1050624 483526655 482476032 230.1G 83 Linux
+   /dev/sda3         483526656 500117503  16590848   7.9G 82 Linux swap / Solaris
+   ```
+
+   确认无误后，继续下一步。
+
+2. **写入更改 (保存)** 输入 `w` 命令将刚才的所有更改写入磁盘分区表并退出 `fdisk`。这是最关键的一步，在此之前的所有操作都只在内存中进行。
+
+   ```
+   Command (m for help): w
+   The partition table has been altered.
+   Calling ioctl() to re-read partition table.
+   Syncing disks.
+   ```
+
+   如果分区正在使用中，你可能会看到一条消息提示内核仍在旧的分区表，建议重启系统。
+
+   如果你想放弃所有更改并退出，可以输入 `q` 而不是 `w`。
 
 
-# 可执行程序移植
+
+#### 第五步：格式化并激活交换分区
+
+仅仅更改分区 ID 并不会格式化该分区。你需要使用 `mkswap` 命令来将其设置为交换区格式。
+
+1. **格式化分区：**
+
+   ```
+   sudo mkswap /dev/sda3
+   ```
+   
+2. **激活交换分区：**
+
+   ```
+   sudo swapon /dev/sda3
+   ```
+   
+3. **验证激活：** 再次运行 `swapon --show` 或 `free -h`，你应该能看到新的交换分区已经被激活并正在使用。
+
+   ```
+   $ swapon --show
+   NAME      TYPE      SIZE  USED PRIO
+   /dev/sda3 partition 7.9G    0B   -2
+   ```
+
+
+
+
+
+## 查看后台进程
+
+好的，在 Linux 系统中查看和管理后台执行的进程，有几个常用且高效的指令。最核心的两个是 `jobs` 和 `ps`。
+
+
+
+### 1. `jobs` 命令 (最常用和直接)
+
+
+
+`jobs` 命令用于显示当前终端会话（shell session）中启动的后台任务。它非常直接，但**只能看到在当前终端放入后台的任务**。
+
+**使用场景:** 当你使用 `&` 将一个命令放到后台执行，或者使用 `Ctrl+Z` 暂停一个前台任务后用 `bg` 命令将其转到后台时，`jobs` 就能看到它。
+
+**基本语法:**
+
+Bash
+
+```
+jobs [选项]
+```
+
+**常用选项:**
+
+- `-l`: 除了显示任务号和状态，还会显示进程ID (PID)。
+- `-p`: 只显示任务的进程ID (PID)。
+- `-r`: 只显示正在运行 (running) 的任务。
+- `-s`: 只显示已停止 (stopped) 的任务。
+
+**示例:** 假设我们后台运行了 `sleep` 和 `ping` 命令。
+
+Bash
+
+```
+$ sleep 100 &
+[1] 12345
+$ ping google.com > /dev/null &
+[2] 12346
+
+$ jobs
+[1]-  Running                 sleep 100 &
+[2]+  Running                 ping google.com > /dev/null &
+
+$ jobs -l
+[1]-  12345 Running                 sleep 100 &
+[2]+  12346 Running                 ping google.com > /dev/null &
+```
+
+**输出解读:**
+
+- `[1]`, `[2]`: 任务号 (Job ID)。你可以用 `%1`, `%2` 来操作这些任务 (例如 `fg %1` 切换回前台)。
+- `+`: 代表当前默认的任务。
+- `-`: 代表次于默认的任务。
+- `Running`: 任务的当前状态。
+- `sleep 100 &`: 启动任务的原始命令。
+
+
+
+### 2. `ps` 命令 (功能更强大，查看所有进程)
+
+`ps` (process status) 命令可以查看系统上所有用户的所有进程，而不仅仅是当前终端会话的后台任务。因此，它的范围更广。
+
+**使用场景:**
+
+- 查看由其他终端、脚本或系统服务启动的后台进程。
+- 查看已经与终端分离的“守护进程”(daemons)。
+- 当你关闭了原来的终端，想查看之前启动的后台任务时 (`jobs` 此时已无法使用)。
+
+**基本语法 (常用组合):**
+
+Bash
+
+```
+# BSD 风格，最常用，显示所有用户的进程，包括没有终端的
+ps aux
+
+# System V 风格，功能类似
+ps -ef
+
+# 结合 grep 查找特定进程
+ps aux | grep [进程名]
+```
+
+**示例:** 假设我们想查找所有 `sleep` 相关的进程。
+
+Bash
+
+```
+$ ps aux | grep sleep
+# 输出可能如下
+# USER      PID  %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+# myuser  12345   0.0  0.0   7228   888 pts/0    S    02:10   0:00 sleep 100
+# myuser  12500   0.0  0.0   6136   640 pts/0    S+   02:15   0:00 grep --color=auto sleep
+```
+
+**输出解读:**
+
+- `USER`: 启动该进程的用户。
+- `PID`: 进程ID (Process ID)，是操作系统的唯一标识符。
+- `%CPU`, `%MEM`: CPU 和内存的使用率。
+- `TTY`: 进程关联的终端。如果是 `?`，表示该进程没有控制终端，通常是系统守护进程。
+- `STAT`: 进程状态 (如 `S` 表示休眠, `R` 表示运行, `Z` 表示僵尸进程)。
+- `COMMAND`: 启动进程的命令。
+
+**`ps -f` 结合 `pgrep` (更精确的查找)**
+
+有时 `grep` 会把自己也搜索出来。使用 `pgrep` (process ID grep) 可以更精确地找到PID，然后再用 `ps` 查看详细信息。
+
+Bash
+
+```
+# 1. 查找所有名为 'sleep' 的进程的 PID
+$ pgrep sleep
+12345
+
+# 2. 使用 PID 查看进程的详细信息
+$ ps -f -p 12345
+# 或者
+$ ps -fp $(pgrep sleep)
+
+# 输出
+# UID         PID   PPID  C STIME TTY          TIME CMD
+# myuser    12345  11200  0 02:10 pts/0    00:00:00 sleep 100
+```
+
+- `-f`: 显示完整格式的列表 (full format)。
+- `-p`: 指定要查询的 PID。
+
+
+
+### 3. 其他工具
+
+
+
+- **`top` / `htop`**: 这两个是实时进程监控工具。它们会动态刷新显示系统中所有进程的状态，包括后台进程。`htop` 是 `top` 的增强版，界面更友好。你可以直接在它们的界面里看到所有正在运行的进程。
+
+
+
+### 总结
+
+| 命令             | 主要用途                             | 优点                                              | 缺点                                       |
+| ---------------- | ------------------------------------ | ------------------------------------------------- | ------------------------------------------ |
+| **`jobs`**       | 查看和管理**当前终端会话**的后台任务 | 非常直接、简单，易于管理（`fg`, `bg`, `kill %1`） | 只能看到当前终端的任务，关闭终端后信息丢失 |
+| **`ps aux`**     | 查看系统上**所有用户**的所有进程     | 功能强大，信息全面，能看到任何后台进程            | 信息量大，通常需要配合 `grep` 来筛选       |
+| **`pgrep`**      | 根据名称或其他属性查找进程的 PID     | 查找精确，适合在脚本中使用                        | 只返回 PID，需要配合 `ps` 查看详细信息     |
+| **`top`/`htop`** | 实时、动态地监控所有系统进程         | 实时刷新，交互式，信息直观                        | 不适合在脚本中使用，用于即时监控           |
+
+
+
+
+
+# 4.编译
+
+## **动态库编译：**
+
+```
+g++ main.cpp -lmath -L/usr/local/lib -o main
+//-l指定库  -o指定输出  -L指定路径
+```
+
+**编译opencv：**
+
+```
+g++ main.cpp -o exam -I/home/sophda/include -L/home/sophda/lib -lopencv_imgcodecs  -lopencv_imgproc -lopencv_core -ldl -lm -lpthread -lrt
+```
+
+```
+ g++ main.cpp -o exam -I/lib/include -Wl,-rpath,/lib/lib -lopencv_imgcodecs  -lopencv_imgproc -lopencv_core -ldl -lm -lpthread -lrt
+```
+
+## **静态库编译：**
+
+```
+g++ main.cpp -static -o exam -L/home/cvlib -mfpu=neon -mfloat-abi=hard  -lopencv_imgcodecs  -lopencv_imgproc -lopencv_core -ldl -lm -lpthread -lrt
+```
+
+**交叉编译：（静态）**
+
+```
+arm-linux-gnueabi-g++ main.cpp -o exam -static -I/home/sophyda/opencv-3.2.0/arm-install/include -L/home/sophyda/opencv-3.2.0/arm-install/lib -lopencv_imgcodecs  -lopencv_imgproc -lopencv_core -ldl -lm -lpthread -lrt
+```
+
+
+
+# 5.可执行程序移植
 
 我在wsl编译了slam系统，然后出差，打包到虚拟机上面去运行，所以说需要打包程序及相关的动态库。
 
@@ -465,11 +759,9 @@ linux程序在移植的时候，动态库是可以不看路径的。比如说，
 
   
 
-# sh脚本
 
 
-
-# 硬盘
+# 6.硬盘
 
 ## 查看连接的硬盘，即使没有挂载
 
@@ -523,11 +815,17 @@ fdisk -l
 
 
 
-# Nginx
+
+
+
+
+
+
+
+
+# 6.Nginx
 
 ## 配置代理
-
-
 
 在/etc/nginx/config.d/nas.conf中配置：
 

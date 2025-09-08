@@ -731,14 +731,13 @@ int *p2 = ip+4;
 ## 指针+1
 
 ```c++
-    int *sum = new int[10]; // 创建一个动态数组，sum指向第一个元素
-    for (int i = 0; i < 10; i++) // 用循环给数组赋值
-        { sum[i] = i + 1; }
-    for (int i = 0; i < 10; i++) // 用指针运算输出数组的元素
-        { cout << * (sum + i) << " "; }
-    cout << sizeof(int ) <<endl;
-
-    delete [] sum; // 释放数组的内存空间 return 0;
+int *sum = new int[10]; // 创建一个动态数组，sum指向第一个元素
+for (int i = 0; i < 10; i++) // 用循环给数组赋值
+    { sum[i] = i + 1; }
+for (int i = 0; i < 10; i++) // 用指针运算输出数组的元素
+    { cout << * (sum + i) << " "; }
+cout << sizeof(int ) <<endl;
+delete [] sum; // 释放数组的内存空间 return 0;
 ```
 
 输出为：
@@ -3017,6 +3016,8 @@ void Base::setup(Base* const this) { // 隐含的this参数
 
 ## 派生类中的虚析构函数
 
+
+
 ```cpp
 #include <iostream>
 using namespace std;
@@ -3063,6 +3064,8 @@ int main()
 - a是一个指向派生类的基类指针
 - 如果调用a的虚函数，则指向派生类的虚函数实现
 - 如果调用a的非虚函数，则调用基类的非虚函数
+- 因为基类定义了虚析构函数，那么在a在删除时，会先调用基类的析构，然后调用派生类的析构
+- 如果基类没有定义虚析构的话，那么a在删除时，只调用基类的析构，派生类的无法调用析构
 
 
 
@@ -4446,7 +4449,6 @@ int main() {
 std::vector<MyClass> vec;
 MyClass obj;
 vec.push_back(std::move(obj));  // 使用移动语义
-
 ```
 
 - **返回大型对象时**: 当函数返回一个大型对象时，`std::move` 可以避免创建副本。
