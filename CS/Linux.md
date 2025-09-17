@@ -305,8 +305,6 @@ chmod 600 ~/.ssh/id_rsa
 
 - **基本语法**:
 
-  Bash
-
   ```
   chown [新所有者]:[新所属组] 文件/目录
   ```
@@ -336,8 +334,6 @@ chown -R www-data:www-data /var/www/html
 此命令专门用于更改文件或目录的所属组。不过，由于 `chown` 命令也能完成这个功能，`chgrp` 的使用频率相对较低。
 
 - **基本语法**:
-
-  Bash
 
   ```
   chgrp [新所属组] 文件/目录

@@ -454,6 +454,7 @@ someOpenGLFunctionThatDrawsOurTriangle();
 
 这是一种从CPU中的应用向GPU中的着色器发送数据的方式，但是uniform和顶点属性些许不同。
 
+```
 version 330 core
 
 out vec4 FragColor;
@@ -464,6 +465,7 @@ void main()
 {
     FragColor = ourColor;
 }
+```
 
 uniform是全局变量，我们可以在任何着色器中定义它们，而无需通过顶点着色器作为中介。顶点着色器中不需要这个uniform，所以我们不用在那里定义它。
 

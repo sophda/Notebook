@@ -216,11 +216,22 @@ void mainwindow::btn_openpcd() {
 
 # FFmpeg
 
+## 结构体
+
+- AVFormatContext 封装格式上下文结构体，也是统领全局的结构体，保存了视频文件封装格式相关信息。
+- AVInputFormat demuxer 每种封装格式（例如FLV, MKV, MP4, AVI）对应一个该结构体。
+- AVOutputFormat muxer
+- AVStream 视频文件中每个视频（音频）流对应一个该结构体。
+- AVCodecContext 编解码器上下文结构体，保存了视频（音频）编解码相关信息。
+- AVCodec 每种视频（音频）编解码器(例如H.264解码器)对应一个该结构体。
+- AVPacket 存储一帧压缩编码数据。
+- AVFrame 存储一帧解码后像素（采样）数据。
+
 ## api
 
 **1.初始化与注册：**
 
-- av_register_all()
+- `av_register_all()`
 
   **作用**: 这是旧版 FFmpeg API 的一个初始化函数。它的作用是注册所有可用的文件格式（muxers/demuxers）和编解码器（codecs）。在程序开始使用 FFmpeg 功能之前，必须先调用这个函数，否则 `avformat_open_input`、`avcodec_find_decoder` 等函数将无法找到对应的组件。
 
