@@ -4954,6 +4954,23 @@ int main()
 
 
 
+
+
+## std::reverse
+
+用于对容器的内容进行颠倒。
+
+```cpp
+vector<int> vec;
+reverse(vec.begin(), vec.end());
+```
+
+
+
+
+
+
+
 ## std::move
 
 ### 1. **基本原理**
@@ -5809,7 +5826,11 @@ stk.
 
 
 
-# 12.boost
+
+
+
+
+# 13.boost
 
 ## serialization
 
@@ -5938,7 +5959,7 @@ int main()
 
 
 
-# 13.PYTHON
+# 14.PYTHON
 
 ## 配置
 

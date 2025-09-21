@@ -2,7 +2,7 @@
 
 主要是通过ace网络和orbslam3，共同进行重定位
 
-浙大他们是使用的loftr进行的匹配，然后进行的slam定位，他妈的我用ace+slam应该也可以达到一样的效果，他妈的小小浙大，看我取之
+浙大他们是使用的loftr进行的匹配，然后进行的slam定位，我用ace+orbslam3应该也可以达到一样的效果。
 
 
 
@@ -144,35 +144,176 @@ ACE 为一个新场景建图的完整流程被设计在5分钟内完成，主要
 
 
 
-# 遇到的bug以及总结的规范
+# DEBUG
 
 主要是通过ndk stack将堆栈地址转换为对应源文件的地址，这样就可以准确定位出现问题的地方。
 
-## 多线程问题
-
-1.**类中的多线程对象**
-
-要声明为类的成员函数
-
-
-
-# ace libtorch部署
-
-## libtorch安卓端交叉编译
-
-
-
-## Python模型导出
-
-使用torch.jit.trace完成，本来是想用torch script将模型编译成可运行的脚本，这样即使在运行的时候有tensor的切片操作也可以进行相应的处理。
 
 
 
 
+# libtorch部署
 
-## 模型推理
+## 编译libtorch
 
-> 由于Python端是使用skimage+pil进行训练的，而libtorch端需要使用opencv端进行图像读取和处理，因此这里需要对读取的图像进行处理。
+### 编译
+
+```shell
+cd /home/sophda/libtorch/pytorch/arm64build
+# rm -rf ./*
+cmake \
+    -DCMAKE_TOOLCHAIN_FILE=${NDK27}/build/cmake/android.toolchain.cmake \
+    -DANDROID_PLATFORM=android-30 \
+	-DANDROID_ABI="arm64-v8a" \
+    -DUSE_VULKAN=OFF \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DUSE_MKLDNN=OFF \
+    -DUSE_QNNPACK=OFF \
+    -DUSE_PYTORCH_QNNPACK=ON \
+    -DBUILD_TEST=OFF \
+    -DUSE_NNPACK=OFF \
+    -DUSE_CUDA=OFF \
+    -DBUILD_PYTHON:BOOL=OFF \
+    -DBUILD_SHARED_LIBS:BOOL=OFF \
+    -DUSE_NNPACK=ON \
+    -DUSE_OPENMP=OFF \
+    ..
+
+make -j12
+
+```
+
+### 链接
+
+如上文所示，是编译生成的静态库，所以后面调用的时候需要将静态库添加到可执行文件中
+
+- main文件
+
+  ```shell
+  #include <iostream>
+  #include <torch/torch.h>
+  int main(int, char**){
+      std::cout << "Hello, from mobile!\n";
+      torch::Tensor a = torch::rand({2,3});
+      
+      std::cout << a <<std::endl;
+  }
+  
+  ```
+
+- cmake
+
+  ```shell
+  cmake_minimum_required(VERSION 3.5.0)
+  
+  project(mobile VERSION 0.1.0 LANGUAGES C CXX)
+  # set(name mobile)
+  
+  include_directories(
+    /home/sophda/libtorch/x64/libtorch/include
+    /home/sophda/libtorch/x64/libtorch/include/torch/csrc/api/include
+  )
+  
+  set(fbjni_DIR /home/sophda/libtorch/third-party/fbjni)
+  set(fbjni_BUILD_DIR /home/sophda/libtorch/third-party/fbjni/build)
+  add_subdirectory(${fbjni_DIR} ${fbjni_BUILD_DIR})
+  
+  # add_library(fbjni STATIC IMPORTED)
+  # set_property(
+  #     TARGET fbjni
+  #     PROPERTY IMPORTED_LOCATION
+  #     /home/sophda/libtorch/third-party/fbjni/build/libfbjni.a)
+  
+  #########################################################################
+  function(import_static_lib name)
+  add_library(${name} STATIC IMPORTED)
+  set_property(
+      TARGET ${name}
+      PROPERTY IMPORTED_LOCATION
+      /home/sophda/libtorch/pytorch/arm64build/lib/${name}.a)
+  endfunction(import_static_lib)
+  
+  
+  import_static_lib(libtorch)
+  import_static_lib(libtorch_cpu)
+  import_static_lib(libc10)
+  import_static_lib(libnnpack)
+  import_static_lib(libXNNPACK)
+  import_static_lib(libpthreadpool)
+  import_static_lib(libeigen_blas)
+  import_static_lib(libcpuinfo)
+  import_static_lib(libclog)
+  import_static_lib(libpytorch_qnnpack)
+  
+  
+  # Link most things statically on Android.
+  set(pytorch_LIBS
+    fbjni
+    -Wl,--gc-sections
+    -Wl,--whole-archive
+    libtorch
+    libtorch_cpu
+    -Wl,--no-whole-archive
+    libc10
+    libXNNPACK
+    libpthreadpool
+    libeigen_blas
+    libcpuinfo
+    libclog
+    libpytorch_qnnpack
+    libnnpack
+    # openmp
+  
+  )
+  
+  add_executable(mobile main.cpp)
+  target_link_libraries(mobile ${pytorch_LIBS})
+  
+  ```
+
+- 构建脚本
+
+  ```shell
+  cd /home/sophda/libtorch/mobile/armbuild
+  rm -rf ./*
+  cmake \
+      -DCMAKE_TOOLCHAIN_FILE=${NDK27}/build/cmake/android.toolchain.cmake \
+      -DANDROID_PLATFORM=android-30 \
+  	-DANDROID_ABI="arm64-v8a" \
+      ..
+  
+  make -j12
+  ```
+
+
+
+### 静态库编译错误
+
+c10::Error: Tried to register multiple backend fallbacks for the same dispatch key Conjugate; previous registration registered at...
+
+当使用静态库编译时，所有的代码都打包到一块，导致一些些库依赖同样的库，但是在链接时都打包了，导致静态库中出现了相同的符号。
+
+所以编译动态库解决这个问题。
+
+---
+
+编译动态库出现的问题：Android logcat又出现lapack库找不到的情况
+
+lapack是torch的线性代数库，缺少这部分会导致torch中的一些线代操作无法进行。
+
+折中方法：使用eigen库代替lapack库。
+
+
+
+## 模型INT8量化
+
+使用torch.jit.trace完成，本来是想用torch script将模型编译成可运行的脚本，这样即使在运行的时候有tensor的切片操作也可以进行相应的处理。但是该模型在运行时需要用到动态索引，所以失败。
+
+
+
+## ACE 模型推理
+
+> 由于Python端是使用skimage+PIL进行训练的，而libtorch端需要使用opencv端进行图像读取和处理，因此这里需要对读取的图像进行处理。
 
 ```python
 # python 端代码
@@ -297,9 +438,106 @@ ace.forward(normalized,pos);
 
 
 
-# 相机标定
+# orbslam3
 
-## 录制bag包（ros free）
+这里倒是没有什么部署难点，主要是orbslam在对单目+imu定位时，yaml会需要一些旋转矩阵之类的，缺少会报错
+
+## 时间戳同步
+
+这里主要是通过两个时间戳相减，然后在补偿另外一个即可
+
+值得注意的是时间戳的来源，unity 使用的是java类中的方法。
+
+---
+
+UPDATE:使用的是imu和图像回调中，ndk返回的时间戳，是long型纳秒数据。
+
+
+
+
+## 使用ros标定IMU-IMG
+
+
+### kalibr
+
+1.安装：
+
+```
+mkdir -p ~/kalibr_workspace/src
+
+cd ~/kalibr_workspace
+
+source /opt/ros/kinetic/setup.bash
+
+catkin init
+
+catkin config --extend /opt/ros/kinetic
+
+catkin config --cmake-args -DCMAKE_BUILD_TYPE=Release
+
+```
+
+```
+cd ~/kalibr_workspace/src
+git clone https://github.com/ethz-asl/Kalibr.git
+cd ~/kalibr_workspace
+catkin build -DCMAKE_BUILD_TYPE=Release -j8
+```
+
+```
+source ~/kalibr_workspace/devel/setup.bash
+或者是把这句放到bashrc中
+```
+
+### imu-utils
+
+```
+// 下面这句话在imu-utils的launch文件中找到
+roslaunch imu_utils realsense_imu.launch
+
+// 播放bag文件
+rosbag play -r 200 imu.bag
+```
+
+
+
+### 生成标定板图像
+
+```
+rosrun kalibr kalibr_create_target_pdf --type apriltag --nx 6 --ny 6 --tsize 0.025 --tspace 0.3
+```
+
+![image-20250922012913125](src/image-20250922012913125.png)
+
+
+
+### 录制imu和image
+
+在APP端集成了录制imu和image的功能，这里的保存速率是不设限制的，嘎嘎快。
+
+录制的数据包括：
+
+- img.txt：图像数据的时间戳
+- video.avi：视频
+- imu.txt：imu数据
+
+---
+
+imu数据如下：
+
+```
+74392090275411.00000 0.14583 0.06750 0.00839 9.51715 -0.06341 3.71605 
+```
+
+img数据包括时间戳和视频数据：
+
+```
+74392115107317 
+```
+
+以及一个video。
+
+### 录制bag包（ros free）
 
 环境配置：
 
@@ -483,9 +721,9 @@ if __name__ == '__main__':
 
 ---
 
-## matlab处理bag文件(aborted)
+### matlab处理bag文件(aborted)
 
-使用imutils+kalibr吧~
+使用imutils+kalibr吧~，录制了rosbag，matlab读取之后也恢复不出来呜呜呜
 
 ```matlab
 % function data = ...
@@ -596,64 +834,128 @@ save CameraIMUCalibrationData CameraFocalLength CameraPrincipalPoint ImageSize C
 
 
 
+---
 
+### imu标定
 
-## kalibr
-
-1.安装：
-
-```
-mkdir -p ~/kalibr_workspace/src
-
-cd ~/kalibr_workspace
-
-source /opt/ros/kinetic/setup.bash
-
-catkin init
-
-catkin config --extend /opt/ros/kinetic
-
-catkin config --cmake-args -DCMAKE_BUILD_TYPE=Release
+将手机静止一段很长的时间，然后运行脚本标定imu。这样是标定imu的游走噪声等数据
 
 ```
-
-```
-cd ~/kalibr_workspace/src
-git clone https://github.com/ethz-asl/Kalibr.git
-cd ~/kalibr_workspace
-catkin build -DCMAKE_BUILD_TYPE=Release -j8
-```
-
-```
-source ~/kalibr_workspace/devel/setup.bash
-或者是把这句放到bashrc中
-```
-
-
-
-## imu-utils
-
-```
-// 下面这句话在imu-utils的launch文件中找到
-roslaunch imu_utils realsense_imu.launch
-
-// 播放bag文件
+rosrun roslaunch imu_utils k60.launch
 rosbag play -r 200 imu.bag
 ```
 
+得到imu的一系列数据：
+
+![image-20250922012553827](src/image-20250922012553827.png)
+
+
+
+### 相机标定
+
+老生常谈的东西了
+
+```
+rosrun kalibr kalibr_calibrate_cameras --target april_6x6_24x24mm.yaml --models pinhole-radtan --topics /raw_image --bag img.bag
+```
+
+![image-20250922012657086](src/image-20250922012657086.png)
+
+
+
+### 相机imu联合标定
+
+主要是结算二者的位姿变换矩阵
+
+通过标定的imu、相机数据，运行下列脚本：
+
+```
+rosrun kalibr kalibr_calibrate_imu_camera --target april_6x6_24x24mm.yaml --bag ./image_imu.bag --cam ./k60_img.yaml  --imu k60_imu.yaml --imu-models scale-misalignment --timeoffset-padding 0.1 --bag-from-to 1 15  
+```
+
+解算完成后，会有下列结果：
+
+![image-20250922012956772](src/image-20250922012956772.png)
+
+![image-20250922013053624](src/image-20250922013053624.png)
+
+---
+
+orbslam需要的数组是：从相机到IMU的变换（将一个向量从相机坐标系变换到IMU坐标系的矩阵）
+
+```
+Transformation from camera to body-frame (imu)
+
+IMU.T_b_c1: !!opencv-matrix
+   rows: 4
+   cols: 4
+   dt: f
+   data: [-0.00043792, -0.99520531, 0.09780692, 0.04469551,
+          -0.99761251, 0.00718919 , 0.0686848,  0.00118971,
+          -0.06905863, -0.09757333, -0.99283242, 0.05254774,
+         0.0, 0.0, 0.0, 1.0]
+```
 
 
 
 
-# orbslam3
 
-这里倒是没有什么部署难点，主要是orbslam在对单目+imu定位时，yaml会需要一些旋转矩阵之类的，缺少会报错
+# 多线程
 
-# 相机与陀螺仪数据处理
+## 遇到的问题
 
-## 时间戳同步
+1.**类中的多线程对象**
 
-这里主要是通过两个时间戳相减，然后在补偿另外一个即可
+要声明为类的成员函数
 
-值得注意的是时间戳的来源，unity 使用的是java类中的方法。
 
+
+## 线程安全队列
+
+主要是使用条件变量和锁实现。用于保存NDK获取的imu和相机数据。
+
+
+
+
+
+## 线程池
+
+用于并行推理多张图片帧。
+
+
+
+
+
+# OpenGL YUV2RGB
+
+
+
+
+
+
+
+# 点云处理
+
+## 拟合平面
+
+
+
+## 三角化
+
+
+
+
+
+
+
+
+
+# 数据交互
+
+## 图片数据
+
+从OpenCV到C#
+
+
+
+## MESH数据
