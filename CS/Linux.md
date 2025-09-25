@@ -1,6 +1,8 @@
-# 1.WSL配置
+# 1.环境配置
 
-## 设置内存和swap
+## 1.WSL配置
+
+### 设置内存和swap
 
 在用户目录下新建**.wslconfig**
 
@@ -16,7 +18,10 @@ localhostForwarding=true
 
 
 
-# 2.解压缩相关
+
+# 2.命令
+
+## 解压缩相关
 
 ### 解压
 
@@ -34,9 +39,6 @@ tar -zcvf [文件名].tar.gz [文件目录] //打包成.gz文件
 
 
 
-
-
-# 3.命令
 
 ## 设置环境变量
 
@@ -682,84 +684,9 @@ $ ps -fp $(pgrep sleep)
 | **`top`/`htop`** | 实时、动态地监控所有系统进程         | 实时刷新，交互式，信息直观                        | 不适合在脚本中使用，用于即时监控           |
 
 
+## 硬盘
 
-
-
-# 4.编译
-
-## **动态库编译：**
-
-```
-g++ main.cpp -lmath -L/usr/local/lib -o main
-//-l指定库  -o指定输出  -L指定路径
-```
-
-**编译opencv：**
-
-```
-g++ main.cpp -o exam -I/home/sophda/include -L/home/sophda/lib -lopencv_imgcodecs  -lopencv_imgproc -lopencv_core -ldl -lm -lpthread -lrt
-```
-
-```
- g++ main.cpp -o exam -I/lib/include -Wl,-rpath,/lib/lib -lopencv_imgcodecs  -lopencv_imgproc -lopencv_core -ldl -lm -lpthread -lrt
-```
-
-## **静态库编译：**
-
-```
-g++ main.cpp -static -o exam -L/home/cvlib -mfpu=neon -mfloat-abi=hard  -lopencv_imgcodecs  -lopencv_imgproc -lopencv_core -ldl -lm -lpthread -lrt
-```
-
-**交叉编译：（静态）**
-
-```
-arm-linux-gnueabi-g++ main.cpp -o exam -static -I/home/sophyda/opencv-3.2.0/arm-install/include -L/home/sophyda/opencv-3.2.0/arm-install/lib -lopencv_imgcodecs  -lopencv_imgproc -lopencv_core -ldl -lm -lpthread -lrt
-```
-
-
-
-# 5.可执行程序移植
-
-我在wsl编译了slam系统，然后出差，打包到虚拟机上面去运行，所以说需要打包程序及相关的动态库。
-
-linux程序在移植的时候，动态库是可以不看路径的。比如说，在wsl上程序依赖的动态库存在于各个文件夹，那么在虚拟机上，就可以把所有的动态库一次性打包过去，然后制定好路径即可。
-
-- 查看程序需要哪些动态库，也就是需要打包的部分
-
-  ```
-  ldd ./AtlasORBslam
-  ```
-
-  寻找这些动态库：()
-
-  ```
-  find / -name libboost_system.so
-  ```
-
-  打包这些动态库：
-
-  ```
-  cd ....
-  tar -cvf boost.tar ./libboost*.so
-  ```
-
-- 在虚拟机上面，解压相应的程序及动态库，要让程序能找到这些库，所以：
-
-  ```
-  cd /库的路径
-  pwd  # 获取库的路径，方便一点，直接复制结果就可以了
-  sudo vi /etc/ld.so.conf
-  # 添加 库 的路径
-  sudo ldconfig
-  ```
-
-  
-
-
-
-# 6.硬盘
-
-## 查看连接的硬盘，即使没有挂载
+### 查看连接的硬盘，即使没有挂载
 
 ```
 fdisk -l
@@ -767,7 +694,7 @@ fdisk -l
 
 
 
-## 机械硬盘速度
+### 机械硬盘速度
 
 磁盘120个扇区，每个扇区512B，转速是3600转/min，那么该磁盘的速度是多少kb/s？
 
@@ -819,9 +746,9 @@ fdisk -l
 
 
 
-# 6.Nginx
+## Nginx
 
-## 配置代理
+### 配置代理
 
 在/etc/nginx/config.d/nas.conf中配置：
 
@@ -848,4 +775,81 @@ server {
 ```
 sudo systemctl restart nginx
 ```
+
+
+## 编译
+
+### **动态库编译：**
+
+```
+g++ main.cpp -lmath -L/usr/local/lib -o main
+//-l指定库  -o指定输出  -L指定路径
+```
+
+**编译opencv：**
+
+```
+g++ main.cpp -o exam -I/home/sophda/include -L/home/sophda/lib -lopencv_imgcodecs  -lopencv_imgproc -lopencv_core -ldl -lm -lpthread -lrt
+```
+
+```
+ g++ main.cpp -o exam -I/lib/include -Wl,-rpath,/lib/lib -lopencv_imgcodecs  -lopencv_imgproc -lopencv_core -ldl -lm -lpthread -lrt
+```
+
+### **静态库编译：**
+
+```
+g++ main.cpp -static -o exam -L/home/cvlib -mfpu=neon -mfloat-abi=hard  -lopencv_imgcodecs  -lopencv_imgproc -lopencv_core -ldl -lm -lpthread -lrt
+```
+
+**交叉编译：（静态）**
+
+```
+arm-linux-gnueabi-g++ main.cpp -o exam -static -I/home/sophyda/opencv-3.2.0/arm-install/include -L/home/sophyda/opencv-3.2.0/arm-install/lib -lopencv_imgcodecs  -lopencv_imgproc -lopencv_core -ldl -lm -lpthread -lrt
+```
+
+
+
+## 可执行程序移植
+
+### 查看程序需要的动态库
+
+- ldd
+
+我在wsl编译了slam系统，然后出差，打包到虚拟机上面去运行，所以说需要打包程序及相关的动态库。
+
+linux程序在移植的时候，动态库是可以不看路径的。比如说，在wsl上程序依赖的动态库存在于各个文件夹，那么在虚拟机上，就可以把所有的动态库一次性打包过去，然后制定好路径即可。
+
+- 查看程序需要哪些动态库，也就是需要打包的部分
+
+  ```
+  ldd ./AtlasORBslam
+  ```
+
+  寻找这些动态库：()
+
+  ```
+  find / -name libboost_system.so
+  ```
+
+  打包这些动态库：
+
+  ```
+  cd ....
+  tar -cvf boost.tar ./libboost*.so
+  ```
+
+- 在虚拟机上面，解压相应的程序及动态库，要让程序能找到这些库，所以：
+
+  ```
+  cd /库的路径
+  pwd  # 获取库的路径，方便一点，直接复制结果就可以了
+  sudo vi /etc/ld.so.conf
+  # 添加 库 的路径
+  sudo ldconfig
+  ```
+
+  
+
+
 

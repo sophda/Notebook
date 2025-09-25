@@ -928,6 +928,321 @@ IMU.T_b_c1: !!opencv-matrix
 
 # OpenGL YUV2RGB
 
+实现gpu加速yuv转rgb
+
+## API与变量
+
+### GLuint
+
+表示一个32位无符号整数。
+
+### EGLDisplay
+
+是EGL API中的核心数据类型，表示一个与本地窗口系统的链接。**** 它是 EGL 操作的起点。它代表了你程序想要在其上渲染图形的**物理或虚拟显示设备**（屏幕、窗口、离屏表面等）。
+
+```
+EGLDisplay display_ = EGL_NO_DISPLAY;
+```
+
+
+
+### EGLContext
+
+
+
+### EGLSurface
+
+
+
+### createProgram（自定义）
+
+用于封装创建、编译、链接一个完整的OpenGL着色器程序的过程。
+
+```
+createProgram(const char* vertexSrc, const char* fragmentSrc) {
+GLuint vertexShader = loadShader(GL_VERTEX_SHADER, vertexSrc);
+    if (vertexShader == 0) {
+        LOGE("Failed to load vertex shader");
+        return 0;
+    }
+
+    GLuint fragmentShader = loadShader(GL_FRAGMENT_SHADER, fragmentSrc);
+    if (fragmentShader == 0) {
+        LOGE("Failed to load fragment shader");
+        glDeleteShader(vertexShader);
+        return 0;
+    }
+
+    GLuint program = glCreateProgram();
+    if (program == 0) {
+        LOGE("Could not create program");
+        glDeleteShader(vertexShader);
+        glDeleteShader(fragmentShader);
+        return 0;
+    }
+
+    glAttachShader(program, vertexShader);
+    glAttachShader(program, fragmentShader);
+    glLinkProgram(program);
+
+    GLint linked;
+    glGetProgramiv(program, GL_LINK_STATUS, &linked);
+    if (!linked) {
+        GLint infoLen = 0;
+        glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infoLen);
+        if (infoLen > 1) {
+            char* infoLog = (char*)malloc(sizeof(char) * infoLen);
+            glGetProgramInfoLog(program, infoLen, nullptr, infoLog);
+            LOGE("Error linking program:\n%s", infoLog);
+            free(infoLog);
+        }
+        glDeleteProgram(program);
+        return 0;
+    }
+
+    // 链接成功后，可以删除着色器对象
+    glDetachShader(program, vertexShader);
+    glDetachShader(program, fragmentShader);
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+
+    return program;
+```
+
+
+
+
+
+### setupTextures（自定义）
+
+```
+setupTextures() {
+    LOGI("Setting up textures...");
+    // --- 为 I420 (planar) 格式创建纹理 ---
+    int uvWidth = imageWidth_ / 2;
+    int uvHeight = imageHeight_ / 2;
+
+    // 1. Y 纹理
+    glGenTextures(1, &yTexture_);
+    glBindTexture(GL_TEXTURE_2D, yTexture_);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    // 使用 GL_R8 作为单通道纹理的内部格式 (GLES 3.0+)
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, imageWidth_, imageHeight_, 0, GL_RED, GL_UNSIGNED_BYTE, nullptr);
+
+    // 2. U 纹理
+    glGenTextures(1, &uTexture_);
+    glBindTexture(GL_TEXTURE_2D, uTexture_);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, uvWidth, uvHeight, 0, GL_RED, GL_UNSIGNED_BYTE, nullptr);
+
+    // 3. V 纹理
+    glGenTextures(1, &vTexture_);
+    glBindTexture(GL_TEXTURE_2D, vTexture_);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, uvWidth, uvHeight, 0, GL_RED, GL_UNSIGNED_BYTE, nullptr);
+
+    // --- 为 NV12/NV21 (semi-planar) 格式创建纹理 ---
+    // 4. UV 交错纹理
+    glGenTextures(1, &uvTexture_);
+    glBindTexture(GL_TEXTURE_2D, uvTexture_);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    // 使用 GL_RG8 作为双通道纹理的内部格式
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RG8, uvWidth, uvHeight, 0, GL_RG, GL_UNSIGNED_BYTE, nullptr);
+
+    // 解绑纹理
+    glBindTexture(GL_TEXTURE_2D, 0);
+    LOGI("Textures created successfully.");
+}
+```
+
+
+
+### setupFBO
+
+```
+setupFBO() {
+    LOGI("Setting up Framebuffer Object (FBO)...");
+    // 1. 创建 FBO
+    glGenFramebuffers(1, &fbo_);
+
+    // 2. 创建一个纹理，作为 FBO 的颜色附件（渲染目标）
+    glGenTextures(1, &rgbTexture_);
+    glBindTexture(GL_TEXTURE_2D, rgbTexture_);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    // 分配存储空间，格式为 RGB
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, imageWidth_, imageHeight_, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+
+    // 3. 将纹理附加到 FBO
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, rgbTexture_, 0);
+
+    // 4. 检查 FBO 状态，这是非常重要的调试步骤
+    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (status != GL_FRAMEBUFFER_COMPLETE) {
+        LOGE("Failed to create complete FBO: 0x%x", status);
+    } else {
+        LOGI("FBO created successfully.");
+    }
+
+    // 5. 解绑 FBO，返回到默认的窗口系统帧缓冲
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+```
+
+
+
+### glGenVertexArrays
+
+```
+void glGenVertexArrays(GLsizei n, GLuint *arrays);
+```
+
+**生成 `n` 个新的顶点数组对象 (Vertex Array Object - VAO) 的名称（ID）**。这些 ID 存储在 `arrays` 指向的数组中。
+
+
+
+
+
+### glGenBuffers
+
+```
+void glGenBuffers(GLsizei n, GLuint *buffers);
+```
+
+**生成 `n` 个新的缓冲区对象 (Buffer Object) 的名称（ID）**。这些 ID 存储在 `buffers` 指向的数组中。
+
+
+
+
+
+### glBindVertexArray
+
+```
+void glBindVertexArray(GLuint array);
+```
+
+**绑定指定的顶点数组对象 (VAO)。** 所有后续的顶点属性配置 (`glVertexAttribPointer`, `glEnableVertexAttribArray`) 都将记录在这个 VAO 中。如果 `array` 为 0，则解绑当前 VAO（恢复默认顶点数组状态）。
+
+
+
+
+
+### glBindBuffer
+
+```
+void glBindBuffer(GLenum target, GLuint buffer);
+```
+
+**将指定的缓冲区对象绑定到给定的目标上。** 后续所有作用于该目标的缓冲区操作（如 `glBufferData`, `glVertexAttribPointer`）都将影响这个绑定的缓冲区。如果 `buffer` 为 0，则解绑当前绑定到 `target` 的缓冲区。
+
+
+
+
+
+### glBufferData
+
+```
+void glBufferData(GLenum target, GLsizeiptr size, const void *data, GLenum usage);
+```
+
+**创建并初始化绑定到 `target` 的缓冲区对象的数据存储。** 它分配新的存储空间并用 `data` 的内容填充它（如果 `data` 不是 NULL）。如果该缓冲区已有存储空间，`glBufferData` 会先删除旧存储再创建新存储。
+
+
+
+
+
+
+
+
+
+### glEnableVertexAttribArray
+
+```
+void glEnableVertexAttribArray(GLuint index);
+```
+
+**启用指定索引 (`index`) 的通用顶点属性数组。** 如果启用，当调用绘图命令（如 `glDrawArrays`, `glDrawElements`）时，该索引对应的顶点属性数据将从之前通过 `glVertexAttribPointer` 绑定的缓冲区中获取。如果禁用，则使用为该索引设置的当前顶点属性值（通过 `glVertexAttrib*` 系列函数设置）。
+
+
+
+
+
+### glVertexAttribPointer
+
+```
+void glVertexAttribPointer(GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const void *pointer);
+```
+
+ **定义绑定到 `GL_ARRAY_BUFFER` 目标的缓冲区中，指定索引 (`index`) 的顶点属性数据的格式和位置。** 它告诉 OpenGL 如何解释缓冲区中的数据以提供给顶点着色器中的特定输入变量。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -374,25 +374,212 @@ glDeleteShader(vertexShader);
 glDeleteShader(fragmentShader);
 ```
 
+---
+
+#### 顶点着色器
+
+**作用：** 处理每个顶点的变换和属性计算
+
+- **执行频率：** 每个顶点执行一次
+- 主要任务：
+  - 坐标变换：模型空间 → 世界空间 → 观察空间 → 裁剪空间
+  - 计算并输出顶点属性（法线、颜色、纹理坐标等）
+- **关键输出：** `gl_Position`（裁剪空间坐标）
+- 典型应用：
+  - 模型变换、视图变换、投影变换
+  - 骨骼动画（蒙皮）
+  - 顶点位移（基于高度图、噪声等）
+  - 简单的顶点光照
+
+```glsl
+#version 330 core
+layout(location = 0) in vec3 aPos;
+layout(location = 1) in vec2 aTexCoord;
+
+out vec2 TexCoord;
+uniform mat4 model;
+uniform mat4 view;
+uniform mat4 projection;
+
+void main() {
+    gl_Position = projection * view * model * vec4(aPos, 1.0);
+    TexCoord = aTexCoord;
+}
+```
+
+
+
+#### 曲面细分着色器
+
+曲面细分阶段实际上包含两个可编程着色器和一个固定功能阶段：
+
+2.1 曲面细分控制着色器 (Tessellation Control Shader)
+
+- **作用：** 决定如何细分图元
+- **输入：** 原始图元的控制点（patch）
+- **输出：** 细分级别和变换后的控制点
+- **控制细分密度**（基于距离、屏幕尺寸等）
+
+2.2 曲面细分器 (Tessellator) - 固定功能
+
+- 根据控制着色器的指令实际生成新的顶点
+
+2.3 曲面细分评估着色器 (Tessellation Evaluation Shader)
+
+- **作用：** 处理细分后生成的新顶点
+- **类似顶点着色器**，但处理细分产生的顶点
+- 常用于：LOD（细节层次）、动态曲面细分
+
+**应用场景：** 地形渲染、自适应细节、曲面建模
+
+
+
+
+
+#### 几何着色器
+
+**作用：** 处理整个图元，可以创建/销毁图元
+
+- **执行频率：** 每个图元执行一次（点、线、三角形）
+- **输入：** 完整的图元（如三角形的三个顶点）
+- **输出：** 零个或多个新图元
+- **独特能力：** 可以改变图元类型（如点→三角形）
+
+```glsl
+#version 330 core
+layout(triangles) in;          // 输入三角形
+layout(triangle_strip, max_vertices = 3) out; // 输出三角形带
+
+void main() {
+    for(int i = 0; i < 3; i++) {
+        // 可以修改每个顶点的位置和属性
+        gl_Position = gl_in[i].gl_Position;
+        EmitVertex();
+    }
+    EndPrimitive();
+}
+```
+
+**应用场景：**
+
+- 法线可视化（从顶点生成线段）
+- 点精灵（point sprites）扩展
+- 动态几何生成
+- 阴影体积挤出
+
+
+
+#### 片段着色器
+
+**作用：**在光栅化之后，会有很多片段。 计算每个片段的最终颜色。
+
+- **执行频率：** **每个片段（潜在像素）执行一次**
+- 主要任务：
+  - 纹理采样
+  - 光照计算（Phong、PBR等）
+  - 材质计算
+  - 后期处理效果
+- **关键输出：** 颜色值、深度值（可选）
+
+```glsl
+#version 330 core
+in vec2 TexCoord;
+in vec3 Normal;
+in vec3 FragPos;
+
+out vec4 FragColor;
+
+uniform sampler2D diffuseTexture;
+uniform vec3 lightPos;
+uniform vec3 viewPos;
+
+void main() {
+    // 纹理采样
+    vec3 objectColor = texture(diffuseTexture, TexCoord).rgb;
+    
+    // 简单光照计算
+    vec3 norm = normalize(Normal);
+    vec3 lightDir = normalize(lightPos - FragPos);
+    float diff = max(dot(norm, lightDir), 0.0);
+    vec3 diffuse = diff * vec3(1.0);
+    
+    // 环境光
+    vec3 ambient = 0.1 * vec3(1.0);
+    
+    // 镜面光
+    vec3 viewDir = normalize(viewPos - FragPos);
+    vec3 reflectDir = reflect(-lightDir, norm);
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
+    vec3 specular = spec * vec3(1.0);
+    
+    vec3 result = (ambient + diffuse + specular) * objectColor;
+    FragColor = vec4(result, 1.0);
+}
+```
+
+**应用场景：** 所有材质渲染、光照、特效
+
+
+
+
+
+### 向量
+
+GLSL中的向量是一个可以包含有2、3或者4个分量的容器，分量的类型可以是前面默认基础类型的任意一个。它们可以是下面的形式（`n`代表分量的数量）：
+
+| 类型    | 含义                            |
+| :------ | :------------------------------ |
+| `vecn`  | 包含`n`个float分量的默认向量    |
+| `bvecn` | 包含`n`个bool分量的向量         |
+| `ivecn` | 包含`n`个int分量的向量          |
+| `uvecn` | 包含`n`个unsigned int分量的向量 |
+| `dvecn` | 包含`n`个double分量的向量       |
+
+---
+
+**向量值的获取：**
+
+一个向量的分量可以通过`vec.x`这种方式获取，这里`x`是指这个向量的第一个分量。你可以分别使用`.x`、`.y`、`.z`和`.w`来获取它们的第1、2、3、4个分量。GLSL也允许你对颜色使用`rgba`，或是对纹理坐标使用`stpq`访问相同的分量。
+
+---
+
+**向量的重组：**
+
+实现的效果是在上一个的基础上追加，或者是用yxzy这种用法去变更顺序。
+
+```
+vec2 someVec;
+vec4 differentVec = someVec.xyxx;
+vec3 anotherVec = differentVec.zyw;
+vec4 otherVec = someVec.xxxx + anotherVec.yxzy;
+```
+
+
+
 
 
 ### 输入与输出
 
-每个着色器是独立的，也是整体的一部分，因此为了方便数据交互，希望每个着色器都有输入和输出。GLSL定义了`in`和`out`来实现这个目的。**只要一个输出变量和下一个着色器阶段的输入匹配，就会传递下去**
+每个着色器是独立的，也是整体的一部分，因此为了方便数据交互，希望每个着色器都有输入和输出。**GLSL定义了`in`和`out`来实现这个目的。** **只要一个输出变量和下一个着色器阶段的输入匹配，就会传递下去**
 
-**1.顶点着色器：**可以从顶点数据中直接接受输入，为了方便定义，使用`location`指定输入变量，这样就可以在cpu上配置顶点属性。
+**1.顶点着色器：**可以从顶点数据中直接接受输入，为了方便定义，使用`location`指定输入变量，这样就可以在cpu上配置顶点属性。使用`in`关键词，表示顶点着色器的输入属性，比如输入顶点的位置信息。
 
 ```
 #version 330 core
 layout (location = 0) in vec3 aPos;
 
+out vec4 vertexColor; // 为片段着色器指定一个颜色输出
+
 void main()
 {
-    gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
+    gl_Position = vec4(aPos, 1.0); // 注意我们如何把一个vec3作为vec4的构造器的参数
+    vertexColor = vec4(0.5, 0.0, 0.0, 1.0); // 把输出变量设置为暗红色
 }
 ```
 
-使用`in`关键词，表示顶点着色器的输入属性，比如输入顶点的位置信息。
+- `#version 330 core`
+- `layout (location = 0) in vec3 aPos;`声明输入变量，定义了顶点着色器接受顶点属性，即pos为位置坐标
+- `out vec4 vertexColor;` 指定输出变量为vec4
 
 **2.片段着色器：**片段着色器是计算最后的颜色输出，需要输出一个`vec4`颜色输出变量，会生成一个最终输出的颜色。
 
@@ -400,10 +587,12 @@ void main()
 #version 330 core
 out vec4 FragColor;
 
+in vec4 vertexColor; // 从顶点着色器传来的输入变量（名称相同、类型相同）
+
 void main()
 {
-    FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
-} 
+    FragColor = vertexColor;
+}
 ```
 
 ### 绘制流程
@@ -494,6 +683,34 @@ glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
 
 
 ## 纹理
+
+纹理是一个2D图片（甚至也有1D和3D的纹理），它可以用来添加物体的细节；你可以想象纹理是一张绘有砖块的纸，无缝折叠贴合到你的3D的房子上，这样你的房子看起来就像有砖墙外表了。因为我们可以在一张图片上插入非常多的细节，这样就可以让物体非常精细而不用指定额外的顶点。
+
+
+
+**为了能够把纹理映射(Map)到三角形上，我们需要指定三角形的每个顶点各自对应纹理的哪个部分。这样每个顶点就会关联着一个纹理坐标(Texture Coordinate)，用来标明该从纹理图像的哪个部分采样**（译注：采集片段颜色）。之后在图形的其它片段上进行片段插值(Fragment Interpolation)。
+
+
+
+纹理坐标在x和y轴上，范围为0到1之间（注意我们使用的是2D纹理图像）。使用纹理坐标获取纹理颜色叫做采样(Sampling)。纹理坐标起始于(0, 0)，也就是纹理图片的左下角，终止于(1, 1)，即纹理图片的右上角。下面的图片展示了我们是如何把纹理坐标映射到三角形上的。
+
+![img](src/tex_coords.png)
+
+我们为三角形指定了3个纹理坐标点。如上图所示，我们希望三角形的左下角对应纹理的左下角，因此我们把三角形左下角顶点的纹理坐标设置为(0, 0)；同理右下方的顶点设置为(1, 0)；三角形的上顶点对应于图片的上中位置所以我们把它的纹理坐标设置为(0.5, 1.0)。我们只要给顶点着色器传递这三个纹理坐标就行了，接下来它们会被传到片段着色器中，它会为每个片段进行纹理坐标的插值。
+
+纹理坐标看起来就像这样：
+
+```c++
+float texCoords[] = {
+    0.0f, 0.0f, // 左下角
+    1.0f, 0.0f, // 右下角
+    0.5f, 1.0f  // 上中
+};
+```
+
+
+
+
 
 
 
