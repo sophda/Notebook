@@ -142,6 +142,24 @@ networks:
 
 如果在dockerfile中没有设置entrypoint或者是太简单了跑完直接容器exit了，那么可以在compose中覆盖掉原来的entrypoint，要加tail -f /dev/null这是挂住前台不让bash退出的
 
+
+
+## 容器内文件拷贝到宿主机
+
+```
+# 语法：docker cp <容器名或ID>:<容器内路径> <宿主机目标路径>
+docker cp my_container:/app/data.txt /home/user/backup/
+docker cp my_container:/var/log/nginx/ /tmp/nginx_logs/
+```
+
+
+
+
+
+
+
+
+
 # Dockerfile
 
 从dockerfile构建镜像

@@ -3,9 +3,7 @@
 
 
 
-
-
-# 0.0关键词
+# 关键词
 
 ## static
 
@@ -235,7 +233,7 @@ const int a = 10;
 2. **增强代码能力**：可以在编译期进行更复杂的计算，例如计算斐波那契数列、进行元编程等。
 3. **安全性**：编译器会在编译时验证 `constexpr` 表达式是否真的能求值。如果不能，会直接报错，而不是留到运行时出问题。
 
-### 3. `constexpr` 的使用
+### `constexpr` 的使用
 
 `constexpr` 可以用于修饰变量、函数（包括构造函数）和 C++17 后的 `if` 语句。
 
@@ -564,9 +562,7 @@ return 0;
 - 链接阶段：在C语言的默认机制下，链接器只关心函数**名字**是否对得上，它通常**不会去检查参数的类型**是否匹配。
 - 运行阶段：`hello`这个参数会首先压入栈中，在调用func函数时，会开辟新的栈帧，然后将实参复制给形参，而传入的实参`hello`是一个字符串，压入栈的其实是他的首地址，比如`0x1000`，然后在复制的过程中发生了**把地址解释成int型的操作**
 
-
-
-# 0.1操作符与重载
+# 操作符与重载
 
 ## 操作符
 
@@ -847,7 +843,7 @@ String& operator=(const String& other) {
 
 
 
-# 0.2设计模式
+# 设计模式
 
 
 
@@ -857,7 +853,7 @@ String& operator=(const String& other) {
 
 
 
-# 1.文件
+# 文件
 
 ## 文件写入
 
@@ -874,7 +870,7 @@ int main() {
 
 
 
-## 二进制文件写入
+## 1.2二进制文件写入
 
 ```c++
 #include <iostream>
@@ -901,7 +897,7 @@ int main()
 
 
 
-## 获得目录所有文件
+## 1.3获得目录所有文件
 
 - sortfun，根据传输的参数arg1，arg2进行排序，如果是<，则所有的从小到大排；如果是>，则从大到小排。
 
@@ -948,7 +944,7 @@ int main()
 
 
 
-# 2.编译、链接
+# 编译、链接
 
 ## 链接
 
@@ -1068,7 +1064,7 @@ cout <<"" <<endl;
 
 在项目中，使用到了一个库的某个对象/函数，需要把这个库的头文件引入进来，这样才能在编译环节展开对应头文件然后找到对应使用的函数，最后才是链接到对应动态库上的函数。
 
-## 1.1 程序的组成
+## 程序的组成
 
 程序内存通常分为以下 **5 个核心段**：
 
@@ -1084,7 +1080,7 @@ cout <<"" <<endl;
 
 
 
-## 1.2.head files
+## head files
 
 头文件保护符：
 
@@ -1109,7 +1105,11 @@ cout <<"" <<endl;
 //为了区别c和cpp 的标准库
 ```
 
-# 3.指针
+
+
+
+
+# 指针
 
 **指针存储的是一个地址，取决于系统的位数。**系统位数越高，寻址空间越大，支持的内存越大。
 
@@ -1197,7 +1197,7 @@ p++; //这是错误的，需要转换之后才能进行运算
 >
 > 也就是避免了new和delete的过程
 
-### **1.unique_ptr:**
+### **unique_ptr:**
 
 - 构造
 
@@ -1265,7 +1265,7 @@ int main()
 
 ---
 
-### **2.shared_ptr**
+### **shared_ptr**
 
 >  原理：不同指针之间，存在一个公共的控制块，这个控制块保存着引用计数。当使用`make_shared`创建智能指针时，会创建这个控制块，当指针复制时，会复制这个控制块，同时引用计数+1；
 
@@ -1352,7 +1352,7 @@ int main()
 
 ---
 
-### **3.weak_ptr**
+### **weak_ptr**
 
 - 构造
 
@@ -1475,7 +1475,7 @@ double b = a;  // 隐式地将int转换为double
 
 ![image-20250607152201740](src/image-20250607152201740.png)
 
-# 4.引用
+# 引用
 
 **总结一下自己使用引用的经验：一般在使用函数的时候定义引用实参，替代指针这样可以直接在函数内修改外部的变量。不要在返回的时候使用引用，会导致悬垂引用**
 
@@ -1612,7 +1612,7 @@ int& add(int & a, int b) {
 
 这种情况倒是可以的。
 
-# 6.函数
+# 函数
 
 ## 函数重载
 
@@ -1943,9 +1943,7 @@ asio::post(socket_.get_executor(), [this, weak, sp_data, req_id, req_type] {
 - 这里捕获的是`weak_ptr`，不会导致原来的`sharedptr`+1，但是在lambda表达式的内部有`weak_ptr.lock()`，这也会导致原来的`shared_ptr`+1，但是区别是：定义在lambda内部，表明这个函数已经执行了，conn对象在lambda执行完后即可释放
 - 如果捕获的是`shared_ptr`，在表达式创建的时候原来的`shared_ptr`会+1，即使这个lambda表达式在队列中永远没有执行，但是只要存在队列中，内部捕获的`shared_ptr`副本就会一直存在，导致原来的connection对象引用计数一直维持，无法释放。
 
-
-
-# 7.类
+# 类
 
 ## 定义
 
@@ -2102,6 +2100,16 @@ int main()
 **2.protected继承：**基类public成员，protected成员，private成员的访问属性在派生类中分别变成：protected, protected, private
 
 **3.private继承：**基类public成员，protected成员，private成员的访问属性在派生类中分别变成：private, private, private
+
+**总结表 1: 成员访问权限**
+
+| 访问位置                | `public` 成员 | `protected` 成员 | `private` 成员 |
+| ----------------------- | ------------- | ---------------- | -------------- |
+| **类的内部**            | ✅ 可访问      | ✅ 可访问         | ✅ 可访问       |
+| **派生类的内部**        | ✅ 可访问      | ✅ 可访问         | ❌ **不可访问** |
+| **类的外部 (通过对象)** | ✅ 可访问      | ❌ **不可访问**   | ❌ **不可访问** |
+
+
 
 ---
 
@@ -2846,7 +2854,7 @@ int main()
 
 
 
-# 7.1虚函数与类的内存模型
+# 虚函数与类的内存模型
 
 ## 概念
 
@@ -3726,7 +3734,7 @@ int main()
 
 
 
-# 8.模板
+# 模板
 
 模板是让编译器为你写代码。避免手动重载
 
@@ -3872,7 +3880,7 @@ cout<< c <<endl;
 
 ## 可变模板参数
 
-###  1.模板参数包 (Template Parameter Pack)
+###  模板参数包 (Template Parameter Pack)
 
 在模板定义中，`typename...` 或 `class...` 用来声明一个模板参数包。这个包可以容纳任意数量的类型。
 
@@ -3891,7 +3899,7 @@ void myFunction(Ts... args); // args 是一个函数参数包
 
 
 
-### 2. 包展开 (Pack Expansion)
+### 包展开 (Pack Expansion)
 
 你不能直接访问参数包中的每一个参数。相反，你需要**展开 (expand)** 这个包。展开是通过在参数包名字的右边放置 `...` 来实现的。
 
@@ -4133,7 +4141,7 @@ int main() {
 
 
 
-# 9.c++并发编程
+# c++并发编程
 
 - 多线程：并行计算
 - 异步：并发执行
@@ -4165,7 +4173,7 @@ int main() {
 | **适用场景** | **CPU密集型任务** <br> 如科学计算、视频编解码、大规模数据处理。需要强大的并行计算能力来缩短执行时间。 | **I/O密集型任务** <br> 如网络请求、文件读写、数据库操作。任务的大部分时间都在等待I/O返回，CPU处于空闲状态。 |
 | **编程模型** | **复杂** <br> 需要处理线程间的同步、资源共享、锁（死锁、活锁）、竞态条件等问题。 | **相对复杂** <br> 逻辑是非线性的，可能导致“回调地狱”(Callback Hell)，但现代编程语言的`async/await`语法糖极大地改善了这一点。 |
 
-# 9.1多线程
+# 多线程
 
 ![image-20250908011152183](src/image-20250908011152183.png)
 
@@ -4919,7 +4927,7 @@ int main() {
 
 
 
-# 9.2异步
+# 异步
 
 **异步的设计理念是：不阻塞当前线程，去执行其他任务。**
 
@@ -4935,7 +4943,7 @@ int main() {
 
 **获取方式**
 
-### 1. `std::async`
+###  `std::async`
 
 这是最简单的异步运行一个函数的方式。`std::async` 会启动一个函数（可能在一个新线程中），并立即返回一个 `std::future` 对象，这个对象最终将持有该函数的返回值。
 
@@ -4964,7 +4972,7 @@ int main() {
 
 
 
-### 2. `std::packaged_task`
+### `std::packaged_task`
 
 这个对象可以将一个函数包装起来，以便稍后执行。你可以在任务真正运行前，就从 `packaged_task` 中获取 `std::future`。这对于更复杂的场景（如线程池）非常有用，因为它将“任务的创建”和“任务的执行”分离开来。
 
@@ -4991,7 +4999,7 @@ int main() {
 
 
 
-### 3. `std::promise`
+###  `std::promise`
 
 `std::promise` 对象可以让你**手动地**设置一个值（或一个异常），而这个值可以被一个与之关联的 `std::future` 获取。这让你能更精细地控制结果在何时变为可用。
 
@@ -5034,7 +5042,7 @@ int main() {
 
 
 
-# 10.STL
+# STL
 
 ## std::string
 
@@ -5087,11 +5095,11 @@ reverse(vec.begin(), vec.end());
 
 ## std::move
 
-### 1. **基本原理**
+### **基本原理**
 
 在 C++ 中，移动语义允许对象的资源所有权（例如动态分配的内存）从一个对象转移到另一个对象，而不是像复制构造函数那样创建资源的副本。这样做可以显著提高性能，尤其是在处理大型数据结构或需要频繁分配和释放资源的场景下。
 
-### 2. **`std::move` 的作用**
+### **`std::move` 的作用**
 
 - **右值引用**: C++ 引入了**右值引用（`T&&`）的概念**，允许我们通过“移动”而非“复制”来处理资源。`std::move` 通过将一个左值转换为右值引用，启用了移动语义。
 
@@ -5101,7 +5109,7 @@ reverse(vec.begin(), vec.end());
 
   如图所示：尽管形参中的string && s是个右值引用，但是s本事是有地址的，是个左值。
 
-### **3.  如何使用 `std::move`**
+### **如何使用 `std::move`**
 
 ```c++
 #include <iostream>
@@ -5124,7 +5132,7 @@ int main() {
 
 在上面的例子中，`std::move(a)` 将 `a` 转换为右值引用，启用了 `MyClass` 的移动构造函数。这样，`b` 将“接管”`a` 的资源，而不是进行复制。
 
-### 4. **使用场景**
+### **使用场景**
 
 - **容器类的元素转移**: 在使用 `std::vector` 或 `std::string` 等标准容器时，移动语义能够提高性能，避免不必要的拷贝。例如，向容器中插入或返回对象时，`std::move` 可以减少不必要的复制。
 
@@ -5147,7 +5155,7 @@ MyClass obj2 = createObject();  // Move constructor
 
 ```
 
-### 5. **注意事项**
+###  **注意事项**
 
 - **不可重复使用的资源**: 移动后，**源对象的状态是未定义的（通常为空或处于某种有效但未指定的状态）**，因此不能再对其执行操作。尽管如此，源对象仍然可以安全地被销毁。
 - **必须显式调用 `std::move`**: `std::move` 是一个类型转换操作，它不会自动执行“移动”。也就是说，在你希望启用移动语义时，必须显式调用 `std::move`。
@@ -5157,6 +5165,90 @@ MyClass obj2 = createObject();  // Move constructor
 ## std::function & bind
 
 可以完全替代以前那种繁琐的函数指针形式。
+
+使用方法是：`std::function<返回值(形参)> function函数名`
+
+---
+
+声明一个function：
+
+```c++
+std::function<void()>：表示一个无参数、无返回值的函数。
+
+std::function<int(int, int)>：表示一个接受两个int参数并返回int的函数。
+
+std::function<double(std::vector<double>&)>：表示一个接受vector<double>引用并返回double的函数。
+```
+
+示例：
+
+1. 包装普通函数：
+
+   ```c++
+   #include <iostream>
+   #include <functional>
+   
+   int add(int a, int b) {
+       return a + b;
+   }
+   
+   int main() {
+       std::function<int(int, int)> func = add;
+       std::cout << func(2, 3) << std::endl; // 输出5
+       return 0;
+   }
+   ```
+
+2. 包装lambda表达式
+
+   ```c++
+   #include <iostream>
+   #include <functional>
+   
+   struct Adder {
+       int operator()(int a, int b) const {
+           return a + b;
+       }
+   };
+   
+   int main() {
+       std::function<int(int, int)> func = Adder();
+       std::cout << func(5, 6) << std::endl; // 输出11
+       return 0;
+   }
+   ```
+
+3. 包装类成员函数
+
+   ```c++
+   #include <iostream>
+   #include <functional>
+   #include <memory>
+   
+   class MyClass {
+   public:
+       int add(int a, int b) {
+           return a + b;
+       }
+   };
+   
+   int main() {
+       MyClass obj;
+       // 使用std::bind绑定对象和成员函数
+       std::function<int(int, int)> func = std::bind(&MyClass::add, &obj, std::placeholders::_1, std::placeholders::_2);
+       std::cout << func(7, 8) << std::endl; // 输出15
+   
+       // 或者使用lambda表达式
+       std::function<int(int, int)> func2 = [&obj](int a, int b) { return obj.add(a, b); };
+       std::cout << func2(9, 10) << std::endl; // 输出19
+   
+       return 0;
+   }
+   ```
+
+   
+
+
 
 
 
@@ -5193,7 +5285,7 @@ std::accumulate(nums.begin()+i, nums.begin()+j+1,0);
 
 
 
-# 11.容器
+# 容器
 
 ## 总览
 
@@ -5427,7 +5519,7 @@ private:
 
 ------
 
-**2. 为什么需要 `noexcept`？**
+** 为什么需要 `noexcept`？**
 
 `vector` 需要在重新分配时提供**强异常安全保证**（即使发生异常也不会泄漏资源）。具体规则：
 
@@ -5533,7 +5625,13 @@ public:
 
 - map.find 通过key查找，返回迭代器
 
+----
 
+如果索引一个不存在的键：
+
+**`operator[]`的行为**：当你使用 `map[key]`访问一个不存在的键时，`std::unordered_map`会自动插入一个新的键值对。键是 `key`，值被**值初始化**（value-initialized）。对于整数类型（如 `int`），值初始化会将其设置为 `0`。
+
+**递增操作**：随后，`++`操作符会对这个新值进行递增。因此，初始值 `0`经过递增后变为 `1`。
 
 ### unordered_map支持自定义类
 
@@ -5604,7 +5702,7 @@ std::unordered_map<
 > nodeUnorderedMap;
 ```
 
-#### 3. 指针作为键的特殊处理
+#### 指针作为键的特殊处理
 
 如果使用`TreeNode*`作为键，需自定义比较/哈希规则：
 
@@ -5804,7 +5902,7 @@ std::map<TreeNode, std::string, TreeNodeCompare> nodeMap;
 
 ## map和unordered_map的区别
 
-### **1. 底层数据结构**
+### **底层数据结构**
 
 |                  |         `std::map`         |      `std::unordered_map`      |
 | :--------------: | :------------------------: | :----------------------------: |
@@ -5813,7 +5911,7 @@ std::map<TreeNode, std::string, TreeNodeCompare> nodeMap;
 
 ------
 
-### **2. 元素排序特性**
+### **元素排序特性**
 
 |                |        `std::map`        |         `std::unordered_map`         |
 | :------------: | :----------------------: | :----------------------------------: |
@@ -5835,7 +5933,7 @@ for (auto& p : um)
 
 ------
 
-### **3. 时间复杂度对比**
+### ** 时间复杂度对比**
 
 |     操作     |  `std::map`  |  `std::unordered_map`  |
 | :----------: | :----------: | :--------------------: |
@@ -5944,7 +6042,7 @@ stk.
 
 
 
-# 13.boost
+# boost
 
 ## serialization
 
@@ -6073,7 +6171,7 @@ int main()
 
 
 
-# 14.PYTHON
+# PYTHON
 
 ## 配置
 
