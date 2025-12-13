@@ -81,7 +81,7 @@ sudo rm -r /usr/include/pcl-1.7 /usr/share/pcl /usr/bin/pcl* /usr/lib/libpcl*
 
 
 
-# OpenCV lib
+# OpenCV
 
 ## 泛洪填充
 

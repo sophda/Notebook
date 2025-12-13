@@ -397,7 +397,7 @@ umask 077
 
 ## 分区文件
 
-#### 第一步：识别目标磁盘和分区
+第一步：识别目标磁盘和分区
 
 首先，你需要找出要修改的分区所在的磁盘。以 root 用户或使用 `sudo` 运行以下命令来列出所有磁盘及其分区表：
 
@@ -424,7 +424,7 @@ Device         Boot   Start       End   Sectors   Size Id Type
 
 在这个例子中，我们假设要将 `/dev/sda3` 的类型从 `83 (Linux)` 改为 `82 (Linux swap)`。
 
-#### 第二步：启动 fdisk 工具
+第二步：启动 fdisk 工具
 
 使用 `fdisk` 命令进入对目标磁盘的交互式操作模式。请确保你指定的是整个磁盘设备，而不是分区（例如，使用 `/dev/sda` 而不是 `/dev/sda3`）。
 
@@ -444,7 +444,7 @@ Be careful before using the write command.
 Command (m for help):
 ```
 
-#### 第三步：更改分区类型 (使用 't' 命令)
+第三步：更改分区类型 (使用 't' 命令)
 
 1. 在 `fdisk` 提示符下，输入 `t` 并按回车。这个命令用于更改分区的系统 ID。
 
@@ -472,7 +472,7 @@ Command (m for help):
    Changed type of partition 'Linux' to 'Linux swap / Solaris'.
    ```
 
-#### 第四步：验证并保存更改
+第四步：验证并保存更改
 
 1. **验证更改 (可选但推荐)** 在保存之前，输入 `p` 命令来打印当前的分区表，检查 `/dev/sda3` 的 `Type` 是否已经变成了 `Linux swap / Solaris`。
 
@@ -506,9 +506,7 @@ Command (m for help):
 
    如果你想放弃所有更改并退出，可以输入 `q` 而不是 `w`。
 
-
-
-#### 第五步：格式化并激活交换分区
+第五步：格式化并激活交换分区
 
 仅仅更改分区 ID 并不会格式化该分区。你需要使用 `mkswap` 命令来将其设置为交换区格式。
 
@@ -851,5 +849,52 @@ linux程序在移植的时候，动态库是可以不看路径的。比如说，
 
   
 
+## 添加守护进程
 
+> 这里以配置virtualhere为例，因为需要后台运行，但是ssh不能一直挂着，所以需要通过守护进程来保证后台一直执行
 
+1. 新建一个 `virtualhere.service` 的文件，写入一下内容
+
+   ```
+   [Unit]
+   Description=virtualhere
+   After=network.target
+   
+   [Service]
+   ExecStart=/home/kickpi/virtualhere/vhusbdarm64
+   Restart=always
+   
+   [Install]
+   WantedBy=multi-user.target
+   
+   ```
+
+   - After说明要在network之后启动
+   - ExecStart说明要后台运行的程序
+
+2. 将这个文件拷贝到系统配置目录中
+
+   ```shell
+   sudo cp ./virtualhere.service /etc/systemd/system/
+   ```
+
+3. 执行一下命令，启动service
+
+   ```shell
+   # 1. 重载 Systemd 配置（修改服务文件后必须执行）
+   sudo systemctl daemon-reload
+   
+   # 2. 启动服务
+   sudo systemctl start virtualhere.service
+   
+   # 3. 设置开机自启（关键！否则重启后进程不自动运行）
+   sudo systemctl enable virtualhere.service
+   ```
+
+   ```shell
+   sudo start virtualhere   # 启动
+   sudo stop virtualhere    # 停止
+   sudo restart virtualhere # 重启
+   ```
+
+   
