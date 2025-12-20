@@ -339,8 +339,6 @@ static int globalmem_open(struct inode *inode, struct file *filp)
 
 
 
-
-
 ## 设备树的组成和结构
 
 ### DTS、DTC、DTB等
@@ -438,7 +436,7 @@ cpp -nostdinc -I. -x assembler-with-cpp rk.dts > rk.dtb.dts.tmp
 
 **节点名不可以重复**
 
-节点名称中可以包含系欸但所代表的地址信息和类型，例如，i2c@1c2c0000指的是位于1c2c0000位置的I2C控制器。**注意注意：这个并不是实际寄存器只是拿来看的增加可读性和避免命名冲突的，并不表明节点名可以重复。**
+节点名称中可以包含系欸但所代表的地址信息和类型，例如，i2c@1c2c0000指的是位于1c2c0000位置的I2C控制器。**注意注意：这个并不是实际寄存器只是拿来看的增加可读性和避免命名冲突的，并不表明节点名可以重复。**以下用法合理，节点名不同。
 
 ```
 /dts-v1/;
@@ -621,4 +619,713 @@ graph TD
     Sys_Read --转发/格式化--> My_Read
     Sys_Cdev --封装--> Driver_Layer
 ```
+
+
+
+# I2c驱动
+
+##  完整的驱动流程
+
+以mpu6050为例
+
+**启动时：**
+
+1. pcb上焊接了传感器，连接到cpu的iic-1接口
+
+2. 在设备树中使能i2c接口，内核通过i2c节点的compatibe字符串和驱动程序中的字符串对暗号，调用probe的驱动函数来创建adapter对象。
+
+   > **adapter和platform_device：**
+   >
+   > - 设备树中配置了使能的I2C接口，内核启动时会创建一个 `struct platform_device` 对象。
+   >
+   > - i2c_adapter通常依赖于 `platform_device`创建出来的，`platform_device`包括地址、时钟电源、中断等
+
+   > **Platform Driver probe函数要做的包括分配adapter的内存：**
+   >
+   > platform_device是在/kernel/drivers/i2c/busses中定义的，可以理解为iic总线驱动。
+   >
+   > ```
+   > /* 这是一个 Platform Driver 的 Probe 函数 */
+   > static int rk3x_i2c_probe(struct platform_device *pdev) 
+   > {
+   >     struct i2c_adapter *adap; // 准备创建一个 adapter
+   > 
+   >     // 1. 利用 platform_device 获取硬件资源
+   >     // 比如获取内存地址、中断号。如果没 platform_device，连寄存器在哪都不知道。
+   >     struct resource *mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+   >     int irq = platform_get_irq(pdev, 0);
+   > 
+   >     // 2. 分配 adapter 内存
+   >     adap = devm_kzalloc(&pdev->dev, sizeof(*adap), GFP_KERNEL);
+   > 
+   >     // 3. 【关键点】建立亲子关系！
+   >     // 告诉 adapter：你的父亲（Parent）是这个 platform_device
+   >     adap->dev.parent = &pdev->dev; 
+   >     
+   >     // 4. 设置 adapter 的算法和名字
+   >     adap->algo = &rk3x_i2c_algorithm;
+   >     strlcpy(adap->name, "Rockchip I2C", sizeof(adap->name));
+   > 
+   >     // 5. 将 adapter 注册到 I2C 子系统
+   >     i2c_add_adapter(adap);
+   >     
+   >     // 6. 将 adapter 保存到 platform_device 的私有数据里，方便以后取用
+   >     platform_set_drvdata(pdev, adap); 
+   > 
+   >     return 0;
+   > }
+   > ```
+   >
+   > - 其中probe函数中包含了对 `struct i2c_adapter *adap;`的初始化，每次probe函数执行一次，系统就多了一个 `struct i2c_adapter`实例。也就是说，soc中有多少个iic接口，并且在设备树中使能之后，就会执行多少次probe来创建多少个adapter。
+   >
+   > - 执行 `adap->dev.parent = &pdev->dev;` 建立`adapter *adap`和`platform_device pdev`之间的层级关系。
+   > - 设置adapter的算法和名字，`adap->algo = &rk3x_i2c_algorithm;`
+   > - 将adapter注册到i2c子系统，`i2c_add_adapter(adap);`
+   > - 将adapter保存到 `platform_device`的私有数据里，方便以后使用，` platform_set_drvdata(pdev, adap);`
+
+3. 在i2c节点下新建mpu6050子节点，内核读取设备树，生成一个 `i2c_client`，挂载在i2c总线上。 **由于i2c_adapter已经创建，所以此时i2c_client中的adapter会指向对应的adapter。**但此时只是生成了一个 `i2c_client`对象，并没有加载对应的 `i2c_driver`驱动。
+
+   > 对应过程如下：
+   >
+   > 设备树中包括了iic节点与mpu6050节点，根据使能的iic节点i2c1，在系统启动时创建adapter，此时会执行：
+   >
+   > 1. 通过platform driver中的probe函数，调用rk3x_i2c_probe来创建一个adapter
+   >
+   > 2. 在rk3x_i2c_probe中执行到了`i2c_add_adapter(adap);`（23行）执行顺序为 `i2c_add_adapter(adap); -> i2c_add_adapter -> i2c_register_adapter`，其中`i2c_register_adapter`的定义如下：
+   >
+   >    ```
+   >    /* drivers/i2c/i2c-core-base.c */
+   >    static int i2c_register_adapter(struct i2c_adapter *adap) {
+   >        // 1. 做一些基本的健全性检查
+   >        // 2. 将 adapter 注册到 Linux 设备模型 (device_register)
+   >        // 3. 打印日志 "adapter [...] registered"
+   >        // 4. 【关键分支】 如果是用设备树 (OF = Open Firmware) 启动的
+   >        if (adap->dev.of_node) {
+   >            // 这里的 of_node 指向设备树里的 i2c1 节点
+   >            of_i2c_register_devices(adap); // <--- 这里调用了你要找的函数！
+   >        }
+   >        // ... 如果是 ACPI 系统，会调 acpi_i2c_register_devices ...
+   >    }
+   >    ```
+   >
+   > 3. 在i2c_register_adapter中，通过 `adap->dev.of_node` 来找到对应设备树节点下的mpu6050设备，然后调用 `of_i2c_register_devices`，通过遍历adapter下面的节点来找到对应的mpu6050节点，**也就是在设备树中必须要使能mpu6050设备。**
+   >
+   >    ```
+   >    /* drivers/i2c/i2c-core-of.c */
+   >    void of_i2c_register_devices(struct i2c_adapter *adap) {
+   >        struct device_node *node;
+   >    
+   >        // 遍历 adapter 节点下的每一个“孩子” (子节点)
+   >        for_each_available_child_of_node(adap->dev.of_node, node) {
+   >            
+   >            // 如果这个孩子已经有对应的 client 了，就跳过
+   >            if (of_node_test_and_set_flag(node, OF_POPULATED))
+   >                continue;
+   >    
+   >            // 【大功告成】 为这个子节点创建 i2c_client
+   >            // 并把当前的 adap 赋值给 client->adapter
+   >            i2c_new_client_device(adap, info);
+   >        }
+   >    }
+   >    ```
+   >
+   > ---
+   >
+   > 设备树定义如下：
+   >
+   > ```
+   > /* soc.dtsi 文件 */
+   > i2c1: i2c@ff110000 {         /* <--- 这是 Adapter (父亲) */
+   >     compatible = "rockchip,rk3399-i2c";
+   >     /* 你的 MPU6050 写在这里面！ */
+   >     mpu6050@68 {             /* <--- 这是 Client (孩子) */
+   >         compatible = "invensense,mpu6050";
+   >         reg = <0x68>;
+   >     };
+   > };
+   > ```
+
+4. 内核加载驱动模块，执行 `insmod mpu6050.ko` 后，注册一个 `i2c_driver`，挂载在i2c总线上
+
+5. i2c core发现名字匹配时，调用driver的probe函数，完成初始化。
+
+   > 驱动中的probe函数主要做的是 **验证芯片的id、初始化芯片、申请内核数据、向用户空间暴露接口。**
+   >
+   > 1. 验证id：通过 `i2c_smbus_read_byte_data` 读取芯片内部的一个固定寄存器（通常叫 `WHO_AM_I`）。
+   > 2. 初始化芯片：如解除休眠模式、设置采样率、设置量程、开启中断等
+   > 3. 申请内核资源：通过私有数据，如 `struct mpu6050_data` 来保持传感器特有的状态
+   > 4. 向用户暴露接口，如通过：input子系统、iio子系统、字符设备等方法
+   >
+   > ---
+   >
+   > 驱动中的函数会传进来一个 `i2c_client`指针，而client指针中包含着adapter，adapter中又包含着algorithm等按iic协议输出的控制。
+
+   
+
+**运行时：**
+
+5. app调用 `read()`函数
+6. 字符设备驱动接受请求，调用 `i2c_transfer`
+7. i2c core找到对应的adapter
+8. algorithm模块操作cpu寄存器，控制电压高低
+9. 物理线路上产生波形，传感器返回数据
+
+
+
+## 驱动总体框架
+
+![image-20251220161522946](src/image-20251220161522946.png)
+
+### **struct i2c_adapter**
+
+```
+/*
+ * i2c_adapter is the structure used to identify a physical i2c bus along
+ * with the access algorithms necessary to access it.
+ */
+struct i2c_adapter {
+    struct module *owner;
+    unsigned int class;               /* classes to allow probing for */
+    const struct i2c_algorithm *algo; /* the algorithm to access the bus */
+    void *algo_data;
+
+    /* data fields that are valid for all devices   */
+    struct rt_mutex bus_lock;
+
+    int timeout;                    /* in jiffies */
+    int retries;
+    struct device dev;              /* the adapter device */
+
+    int nr;
+    char name[48];
+    struct completion dev_released;
+
+    struct mutex userspace_clients_lock;
+    struct list_head userspace_clients;
+
+    struct i2c_bus_recovery_info *bus_recovery_info;
+    const struct i2c_adapter_quirks *quirks;
+};
+```
+
+在 Linux 内核中，`struct i2c_adapter` 代表了**物理上的 I2C 控制器（Host Controller）**。
+
+**核心定义：它是做什么的？**
+
+一个 SoC（比如手机里的骁龙芯片或树莓派的 CPU）内部通常会有多个 I2C 接口（I2C-0, I2C-1, I2C-2...）。
+
+- 每一个物理接口，在内核代码中就对应一个 `struct i2c_adapter` 实例。
+- **它的作用**：它提供了“如何向这条总线发送数据”的能力。**它不关心连的是什么设备，它只关心怎么产生 I2C 的时序波形。**
+
+---
+
+我们把你提供的代码拆解开来看，挑最关键的几个讲：
+
+A. 灵魂所在：通信算法
+
+```
+const struct i2c_algorithm *algo; /* the algorithm to access the bus */
+void *algo_data;
+```
+
+- **`algo`**：这是最重要的字段。它是一个指针，指向一组函数（Function Pointers）。
+  - `adapter` 只是个载体（比如“1号车”这个物体），而 `algo` 才是“开车的方法”。
+  - 当你想发数据时，内核最终会调用 `adapter->algo->master_xfer()` 函数。
+- **`algo_data`**：这是留给厂商用的私有数据。比如瑞芯微或高通的工程师写驱动时，需要记录一些寄存器基地址，就挂在这里。
+
+B. 身份标识
+
+```
+int nr;
+char name[48];
+```
+
+- **`nr`**：Bus Number。你在 Linux 终端输入 `i2cdetect -l` 时看到的 `i2c-0`, `i2c-1` 中的那个数字（0, 1）就是它。
+- **`name`**：控制器的名字，比如 "Tegra I2C Adapter" 或者 "S3C2410-I2C"。
+
+C. 可靠性与控制
+
+```
+struct rt_mutex bus_lock;
+int timeout;
+int retries;
+```
+
+- **`bus_lock`**：I2C 是低速串行总线。如果 CPU 有两个核心同时想用 I2C-0 发数据，必须排队。这个锁就是干这个的，保证同一时刻只有一个线程在操作总线。
+- **`timeout`**：超时时间。如果 CPU 发了信号，对方（Slave）死活不回 ACK，或者搞“时钟拉伸”（Clock Stretching）太久，超过这个时间（单位是 jiffies），驱动就会报错返回。
+- **`retries`**：重试次数。如果发送失败（比如干扰导致 NAK），自动重试几次。
+
+D. 内核胶水层
+
+```
+struct device dev;
+struct module *owner;
+```
+
+- **`dev`**：Linux 设备模型的核心。有了它，这个 Adapter 才能在 `/sys/class/i2c-adapter/` 下显示出来，才能被电源管理（休眠/唤醒）系统纳管。
+- **`owner`**：通常赋值为 `THIS_MODULE`。这是为了防止你正在用这个驱动时，有人强制 `rmmod` 卸载了这个模块，导致系统崩溃。
+
+### **struct i2c_algorithm**
+
+```
+struct i2c_algorithm {
+    /* If an adapter algorithm can't do I2C-level access, set master_xfer
+       to NULL. If an adapter algorithm can do SMBus access, set
+       smbus_xfer. If set to NULL, the SMBus protocol is simulated
+       using common I2C messages */
+    /* master_xfer should return the number of messages successfully
+       processed, or a negative value on error */
+    int (*master_xfer)(struct i2c_adapter *adap, struct i2c_msg *msgs,
+                       int num);
+    int (*smbus_xfer) (struct i2c_adapter *adap, u16 addr,
+                       unsigned short flags, char read_write,
+                       u8 command, int size, union i2c_smbus_data *data);
+
+    /* To determine what the adapter supports */
+    u32 (*functionality) (struct i2c_adapter *);
+
+#if IS_ENABLED(CONFIG_I2C_SLAVE)
+    int (*reg_slave)(struct i2c_client *client);
+    int (*unreg_slave)(struct i2c_client *client);
+#endif
+};
+```
+
+- **master_xfer：** 作为主设备时的发送函数，应该返回成功处理的消息数，或者在出错时返回负值。
+- **smbus_xfer：** smbus是一种i2c协议的协议，如硬件上支持，可以实现这个接口。
+
+
+
+### **struct i2c_client**
+
+表示i2c从设备
+
+```
+struct i2c_client {
+    unsigned short flags;           /* div., see below              */
+    unsigned short addr;            /* chip address - NOTE: 7bit    */
+
+    char name[I2C_NAME_SIZE];
+    struct i2c_adapter *adapter;    /* the adapter we sit on        */
+    struct device dev;              /* the device structure         */
+    int init_irq;                   /* irq set at initialization    */
+    int irq;                        /* irq issued by device         */
+    struct list_head detected;
+    #if IS_ENABLED(CONFIG_I2C_SLAVE)
+            i2c_slave_cb_t slave_cb;        /* callback for slave mode      */
+    #endif
+};
+```
+
+
+
+### **struct i2c_driver**
+
+i2c设备驱动程序
+
+```
+    struct i2c_driver {
+            unsigned int class;
+
+            int (*probe)(struct i2c_client *, const struct i2c_device_id *);
+            int (*remove)(struct i2c_client *);
+
+            struct device_driver driver;
+            const struct i2c_device_id *id_table;
+
+            int (*detect)(struct i2c_client *, struct i2c_board_info *);
+
+            const unsigned short *address_list;
+            struct list_head clients;
+
+            ...
+    };
+```
+
+
+
+
+
+## i2c总线驱动
+
+i2c总线驱动由芯片厂商提供，如果我们使用rk官方提供的Linux内核，i2c总线驱动已经保存在内核中，并且默认情况下已经编译进内核。
+
+下面结合源码简单介绍i2c总线的运行机制。
+
+- 1、注册I2C总线
+- 2、将I2C驱动添加到I2C总线的驱动链表中
+- 3、遍历I2C总线上的设备链表，根据i2c_device_match函数进行匹配，如果匹配调用i2c_device_probe函数
+- 4、i2c_device_probe函数会调用I2C驱动的probe函数
+
+
+
+### i2c总线定义
+
+i2c总线维护着两个链表(I2C驱动、I2C设备)，管理I2C设备和I2C驱动的匹配和删除等
+
+```
+    struct bus_type i2c_bus_type = {
+            .name           = "i2c",
+            .match          = i2c_device_match,
+            .probe          = i2c_device_probe,
+            .remove         = i2c_device_remove,
+            .shutdown       = i2c_device_shutdown,
+    };
+```
+
+
+
+### i2c总线注册
+
+linux启动之后，默认执行i2c_init。
+
+```
+static int __init i2c_init(void)
+{
+        int retval;
+        ...
+        retval = bus_register(&i2c_bus_type);
+        if (retval)
+                return retval;
+
+        is_registered = true;
+        ...
+        retval = i2c_add_driver(&dummy_driver);
+        if (retval)
+                goto class_err;
+
+        if (IS_ENABLED(CONFIG_OF_DYNAMIC))
+                WARN_ON(of_reconfig_notifier_register(&i2c_of_notifier));
+        if (IS_ENABLED(CONFIG_ACPI))
+                WARN_ON(acpi_reconfig_notifier_register(&i2c_acpi_notifier));
+
+        return 0;
+        ...
+}
+```
+
+- 第5行：bus_register注册总线i2c_bus_type，总线定义如上所示。
+- 第11行：i2c_add_driver注册设备dummy_driver。
+
+
+
+### i2c设备和i2c驱动匹配规则
+
+```
+static int i2c_device_match(struct device *dev, struct device_driver *drv)
+{
+    struct i2c_client       *client = i2c_verify_client(dev);
+    struct i2c_driver       *driver;
+
+    /* Attempt an OF style match */
+    if (i2c_of_match_device(drv->of_match_table, client))
+        return 1;
+
+    /* Then ACPI style match */
+    if (acpi_driver_match_device(dev, drv))
+        return 1;
+
+    driver = to_i2c_driver(drv);
+
+    /* Finally an I2C match */
+    if (i2c_match_id(driver->id_table, client))
+        return 1;
+
+    return 0;
+}
+```
+
+- **of_driver_match_device：** 设备树匹配方式，比较 I2C 设备节点的 compatible 属性和 of_device_id 中的 compatible 属性
+- **acpi_driver_match_device：** ACPI 匹配方式
+- **i2c_match_id：** i2c总线传统匹配方式，比较 I2C设备名字和 i2c驱动的id_table->name 字段是否相等
+
+在i2c总线驱动代码源文件中，我们只简单介绍重要的几个点，如果感兴趣可自行阅读完整的i2c驱动源码。 通常情况下，看驱动程序首先要找到驱动的入口和出口函数，驱动入口和出口位于驱动的末尾，如下所示(rk3568)：
+
+```
+static struct platform_driver rk3x_i2c_driver = {
+    .probe   = rk3x_i2c_probe,
+    .remove  = rk3x_i2c_remove,
+    .driver  = {
+        .name  = "rk3x-i2c",
+        .of_match_table = rk3x_i2c_match,
+        .pm = &rk3x_i2c_pm_ops,
+    },
+};
+module_platform_driver(rk3x_i2c_driver);
+```
+
+---
+
+驱动注册函数module_platform_driver(定义在内核源码/include/linux/platform_device.h)，该宏详细请参考前面动态设备树章节， 我们可以从中得到i2c驱动是一个平台驱动，并且我们知道平台驱动结构体是“rk3x_i2c_driver”，平台驱动结构体如下所示。
+
+```
+static const struct of_device_id rk3x_i2c_match[] = {
+    {
+        .compatible = "rockchip,rv1108-i2c",
+        .data = &rv1108_soc_data
+    },
+    {
+        .compatible = "rockchip,rv1126-i2c",
+        .data = &rv1126_soc_data
+    },
+    {
+        .compatible = "rockchip,rk3066-i2c",
+        .data = &rk3066_soc_data
+    },
+    {
+        .compatible = "rockchip,rk3188-i2c",
+        .data = &rk3188_soc_data
+    },
+    {
+        .compatible = "rockchip,rk3228-i2c",
+        .data = &rk3228_soc_data
+    },
+    {
+        .compatible = "rockchip,rk3288-i2c",
+        .data = &rk3288_soc_data
+    },
+    {
+        .compatible = "rockchip,rk3399-i2c",
+        .data = &rk3399_soc_data
+    },
+    {},
+};
+MODULE_DEVICE_TABLE(of, rk3x_i2c_match);
+
+static struct platform_driver rk3x_i2c_driver = {
+    .probe   = rk3x_i2c_probe,
+    .remove  = rk3x_i2c_remove,
+    .driver  = {
+        .name  = "rk3x-i2c",
+        .of_match_table = rk3x_i2c_match,
+        .pm = &rk3x_i2c_pm_ops,
+    },
+};
+```
+
+- 第1-5行：是i2c驱动的匹配表，用于和设备树节点匹配，
+- 第8-16行：是初始化的平台设备结构体，从这个结构体我们可以找到.prob函数，.prob函数的作用我们都很清楚，通常情况下该函数实现设备的基本初始化。
+
+---
+
+以下是.probe函数的内容：
+
+```
+static int rk3x_i2c_probe(struct platform_device *pdev)
+{
+    struct device_node *np = pdev->dev.of_node;
+    const struct of_device_id *match;
+    struct rk3x_i2c *i2c;
+    struct resource *mem;
+    int ret = 0;
+    u32 value;
+    int irq;
+    unsigned long clk_rate;
+
+    i2c = devm_kzalloc(&pdev->dev, sizeof(struct rk3x_i2c), GFP_KERNEL); //分配内存空间rk3x_i2c结构体
+    if (!i2c)
+        return -ENOMEM;
+
+    match = of_match_node(rk3x_i2c_match, np); //找到匹配的设备节点的of_device_id
+    i2c->soc_data = match->data;  //通过of_device_id，获取.data 成员，即.data = &rk3399_soc_data
+
+    /* use common interface to get I2C timing properties */
+    i2c_parse_fw_timings(&pdev->dev, &i2c->t, true);
+
+    strlcpy(i2c->adap.name, "rk3x-i2c", sizeof(i2c->adap.name));
+    i2c->adap.owner = THIS_MODULE;
+    i2c->adap.algo = &rk3x_i2c_algorithm;
+    i2c->adap.retries = 3;
+    i2c->adap.dev.of_node = np;
+    i2c->adap.algo_data = i2c;
+    i2c->adap.dev.parent = &pdev->dev;
+
+    i2c->dev = &pdev->dev;
+
+    spin_lock_init(&i2c->lock);
+    init_waitqueue_head(&i2c->wait);
+
+    i2c->i2c_restart_nb.notifier_call = rk3x_i2c_restart_notify;
+    i2c->i2c_restart_nb.priority = 128;
+    ret = register_pre_restart_handler(&i2c->i2c_restart_nb);
+    if (ret) {
+        dev_err(&pdev->dev, "failed to setup i2c restart handler.\n");
+        return ret;
+    }
+
+    mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+    i2c->regs = devm_ioremap_resource(&pdev->dev, mem);
+    if (IS_ERR(i2c->regs))
+        return PTR_ERR(i2c->regs);
+
+    /*
+    * Switch to new interface if the SoC also offers the old one.
+    * The control bit is located in the GRF register space.
+    */
+    if (i2c->soc_data->grf_offset >= 0) {
+        struct regmap *grf;
+
+        grf = syscon_regmap_lookup_by_phandle(np, "rockchip,grf");
+        if (!IS_ERR(grf)) {
+            int bus_nr;
+
+            /* Try to set the I2C adapter number from dt */
+            bus_nr = of_alias_get_id(np, "i2c");
+            if (bus_nr < 0) {
+                dev_err(&pdev->dev, "rk3x-i2c needs i2cX alias");
+                return -EINVAL;
+            }
+
+            if (i2c->soc_data == &rv1108_soc_data && bus_nr == 2)
+                /* rv1108 i2c2 set grf offset-0x408, bit-10 */
+                value = BIT(26) | BIT(10);
+            else if (i2c->soc_data == &rv1126_soc_data &&
+                bus_nr == 2)
+                /* rv1126 i2c2 set pmugrf offset-0x118, bit-4 */
+                value = BIT(20) | BIT(4);
+            else
+                /* rk3xxx 27+i: write mask, 11+i: value */
+                value = BIT(27 + bus_nr) | BIT(11 + bus_nr);
+
+            ret = regmap_write(grf, i2c->soc_data->grf_offset,
+                    value);
+            if (ret != 0) {
+                dev_err(i2c->dev, "Could not write to GRF: %d\n",
+                    ret);
+                return ret;
+            }
+        }
+    }
+
+    /* IRQ setup */
+    irq = platform_get_irq(pdev, 0);
+    if (irq < 0) {
+        dev_err(&pdev->dev, "cannot find rk3x IRQ\n");
+        return irq;
+    }
+
+    ret = devm_request_irq(&pdev->dev, irq, rk3x_i2c_irq,
+                0, dev_name(&pdev->dev), i2c);
+    if (ret < 0) {
+        dev_err(&pdev->dev, "cannot request IRQ\n");
+        return ret;
+    }
+
+    platform_set_drvdata(pdev, i2c);
+
+    if (i2c->soc_data->calc_timings == rk3x_i2c_v0_calc_timings) {
+        /* Only one clock to use for bus clock and peripheral clock */
+        i2c->clk = devm_clk_get(&pdev->dev, NULL);
+        i2c->pclk = i2c->clk;
+    } else {
+        i2c->clk = devm_clk_get(&pdev->dev, "i2c");
+        i2c->pclk = devm_clk_get(&pdev->dev, "pclk");
+    }
+
+    if (IS_ERR(i2c->clk)) {
+        ret = PTR_ERR(i2c->clk);
+        if (ret != -EPROBE_DEFER)
+            dev_err(&pdev->dev, "Can't get bus clk: %d\n", ret);
+        return ret;
+    }
+    if (IS_ERR(i2c->pclk)) {
+        ret = PTR_ERR(i2c->pclk);
+        if (ret != -EPROBE_DEFER)
+            dev_err(&pdev->dev, "Can't get periph clk: %d\n", ret);
+        return ret;
+    }
+
+    ret = clk_prepare(i2c->clk);
+    if (ret < 0) {
+        dev_err(&pdev->dev, "Can't prepare bus clk: %d\n", ret);
+        return ret;
+    }
+    ret = clk_prepare(i2c->pclk);
+    if (ret < 0) {
+        dev_err(&pdev->dev, "Can't prepare periph clock: %d\n", ret);
+        goto err_clk;
+    }
+
+    i2c->clk_rate_nb.notifier_call = rk3x_i2c_clk_notifier_cb;
+    ret = clk_notifier_register(i2c->clk, &i2c->clk_rate_nb);
+    if (ret != 0) {
+        dev_err(&pdev->dev, "Unable to register clock notifier\n");
+        goto err_pclk;
+    }
+
+    clk_rate = clk_get_rate(i2c->clk);
+    rk3x_i2c_adapt_div(i2c, clk_rate);
+
+    ret = i2c_add_adapter(&i2c->adap);
+    if (ret < 0)
+        goto err_clk_notifier;
+
+    return 0;
+
+err_clk_notifier:
+    clk_notifier_unregister(i2c->clk, &i2c->clk_rate_nb);
+err_pclk:
+    clk_unprepare(i2c->pclk);
+err_clk:
+    clk_unprepare(i2c->clk);
+    return ret;
+}
+```
+
+- 第12-14行：为rk3x_i2c结构体申请空间，后面会详述这个结构体。
+- 第43-44行：获取reg属性，这里使用的是内核提供的“platform_get_resource”它实现的功能和我们使用of函数获取reg属性相同。这里的代码获取得到了i2c的基地址，并且使用“devm_ioremap_resource”将其转化为虚拟地址。
+- 第87-99行：获取中断号，在i2c的设备树节点中定义了中断，这里获取得到的中断号申请中断时会用到，获取函数使用的是内核提供的函数irq_of_parse_and_map。
+- 第122-144行：获取时钟配置并配置。
+
+---
+
+下面我们来看看rk3x_i2c结构体，它是切实用于产商芯片和linux平台关联的桥梁。
+
+```
+struct rk3x_i2c {
+    struct i2c_adapter adap;
+    struct device *dev;
+    const struct rk3x_i2c_soc_data *soc_data;
+
+    /* Hardware resources */
+    void __iomem *regs;
+    struct clk *clk;
+    struct clk *pclk;
+    struct notifier_block clk_rate_nb;
+
+    /* Settings */
+    struct i2c_timings t;
+
+    /* Synchronization & notification */
+    spinlock_t lock;
+    wait_queue_head_t wait;
+    bool busy;
+
+    /* Current message */
+    struct i2c_msg *msg;
+    u8 addr;
+    unsigned int mode;
+    bool is_last_msg;
+
+    /* I2C state machine */
+    enum rk3x_i2c_state state;
+    unsigned int processed;
+    int error;
+    unsigned int suspended:1;
+
+    struct notifier_block i2c_restart_nb;
+    bool system_restarting;
+};
+```
+
+rk3x_i2c结构体成员较多，描述了厂商的i2c控制器信息以及即将注册到总线中的adapter适配器， 通过这个结构体，可以关联linux下的i2c总线模型和产商芯片驱动功能。
+
+- **adap：** 即将注册到总线中的adapter适配器
+- **irq：** 保存i2c的中断号
+- **clk：** clk结构体保存时钟相关信息
+- **busy：** 事件等待的条件
+
+
+
+## i2c设备驱动核心函数
 
