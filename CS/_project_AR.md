@@ -178,7 +178,6 @@ cmake \
     -DUSE_NNPACK=ON \
     -DUSE_OPENMP=OFF \
     ..
-
 make -j12
 
 ```
