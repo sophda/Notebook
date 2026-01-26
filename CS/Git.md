@@ -434,3 +434,29 @@ git pull --rebase origin main
 # 4. 推送
 git push origin main
 ```
+
+
+
+
+
+# 合作开发
+
+> 实习的时候，组里来了一个新的同事，需要三个人一起对项目进行开发
+
+## 不同步的问题
+
+主要使用github desktop进行的开发，然后我切换到远程分支看了一眼，然后拉了下来。后面他们在远程分支上进行开发，我没有动，今天在拉去的时候出现了冲突，显示“3↑  4↓”，表明我有三个待提交，4个待拉取。问题是我当时已经拉下来了三个提交，因此顶多差一个commit，为啥是3和4呢？
+
+下面三张图是当时的github desktop的状态和Android studio中的状态，其实后面看起来，本地和远程分支也就差了一个提交，但是不知道是被git ui污染了还是什么原因，导致本地的三个commit是待提交的状态。
+
+**由于我本地并没有做任何开发，因此需要强制和远程分支保持一致。**由于有“3↑  4↓”，执行pull的时候会导致很多的conflicts，但是我肯定不能手动去合并，因此通过下面的命令和远程保持一致：
+
+```
+git merge --abort  // 有conflict，但是放弃merge（之前merge是要一行行的选有用的，但这里的conflict太多了）
+git fetch origin // 获取远程最新状态
+git reset --hard origin/Feature/new_border_effect // 不会影响main分支，丢弃本地feature分支上的一切修改
+```
+
+
+
+![image-20260126125754490](src/image-20260126125754490.png)
