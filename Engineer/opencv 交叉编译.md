@@ -8,15 +8,15 @@
 
 先看arm架构、Linux服务器、硬浮点
 
-![](src/2023-02-03-08-51-23-image.png)
+![](src/opencv%20交叉编译/2023-02-03-08-51-23-image.png)
 
 从上面的连接下载下来的工具链为：gcc版本为4.9
 
-![](src/2023-02-03-08-37-49-image.png)
+![](src/opencv%20交叉编译/2023-02-03-08-37-49-image.png)
 
 而Ubuntu-18的裸文件系统中内置的gcc版本为7.5！卧槽我也布吉岛为啥版本差了这么多竟然没问题。反正用18年的8.x版本就报  **libopencv_core.so: undefined reference to `fcntl@GLIBC_2.28**  这种错了
 
-![](src/2023-02-03-08-39-53-image.png)
+![](src/opencv%20交叉编译/2023-02-03-08-39-53-image.png)
 
 海思sdk里面的工具链，也是4.x的，但是没有hf硬浮点这种选项，编译出来有问题的哦
 
@@ -24,7 +24,7 @@
 
 环境变量
 
-![](src/2023-02-05-16-00-30-image.png)
+![](src/opencv%20交叉编译/2023-02-05-16-00-30-image.png)
 
 ## 1.下载源代码
 
@@ -40,17 +40,17 @@ cmake-gui
 
 ## 2.配置cmake
 
-![](src/2023-01-31-10-11-31-image.png)
+![](src/opencv%20交叉编译/2023-01-31-10-11-31-image.png)
 
 配置安装路径：
 
-![](src/e2b32d4ac757fb6ae1b25292e7b119ae41eaaeff.png "")
+![](src/opencv%20交叉编译/e2b32d4ac757fb6ae1b25292e7b119ae41eaaeff.png)
 
 ***
 
 线程相关：
 
-![](src/2023-01-22-06-30-53-image.png)
+![](src/opencv%20交叉编译/2023-01-22-06-30-53-image.png)
 
 **CMAKE_CXX_FLAGS、CMAKE_C_FLAGS、CMAKE_EXE_LINKER_FLAGS**
 
@@ -70,9 +70,9 @@ cmake-gui
 
 with_png、jpeg、zlib等也要加上
 
-![](src/4d16fbdffbe427b7eb1624b064480c73116e94fe.png)
+![](src/opencv%20交叉编译/4d16fbdffbe427b7eb1624b064480c73116e94fe.png)
 
-![](src/40505bf2691ca3c3183df26a4ab856190f9cc1e1.png)
+![](src/opencv%20交叉编译/40505bf2691ca3c3183df26a4ab856190f9cc1e1.png)
 
 ## 3.开始编译、安装
 

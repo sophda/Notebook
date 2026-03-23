@@ -1,0 +1,8 @@
+{
+  "promptDelete": false,
+  "readableLineLength": false,
+  "strictLineBreaks": true,
+  "newLinkFormat": "relative",
+  "newFileLocation": "current",
+  "showUnsupportedFiles": false
+}

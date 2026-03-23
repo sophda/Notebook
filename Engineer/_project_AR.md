@@ -506,7 +506,7 @@ rosbag play -r 200 imu.bag
 rosrun kalibr kalibr_create_target_pdf --type apriltag --nx 6 --ny 6 --tsize 0.025 --tspace 0.3
 ```
 
-![image-20250922012913125](src/image-20250922012913125.png)
+![image-20250922012913125](src/_project_AR/image-20250922012913125.png)
 
 
 
@@ -846,7 +846,7 @@ rosbag play -r 200 imu.bag
 
 得到imu的一系列数据：
 
-![image-20250922012553827](src/image-20250922012553827.png)
+![image-20250922012553827](src/_project_AR/image-20250922012553827.png)
 
 
 
@@ -858,7 +858,7 @@ rosbag play -r 200 imu.bag
 rosrun kalibr kalibr_calibrate_cameras --target april_6x6_24x24mm.yaml --models pinhole-radtan --topics /raw_image --bag img.bag
 ```
 
-![image-20250922012657086](src/image-20250922012657086.png)
+![image-20250922012657086](src/_project_AR/image-20250922012657086.png)
 
 
 
@@ -874,9 +874,9 @@ rosrun kalibr kalibr_calibrate_imu_camera --target april_6x6_24x24mm.yaml --bag 
 
 解算完成后，会有下列结果：
 
-![image-20250922012956772](src/image-20250922012956772.png)
+![image-20250922012956772](src/_project_AR/image-20250922012956772.png)
 
-![image-20250922013053624](src/image-20250922013053624.png)
+![image-20250922013053624](src/_project_AR/image-20250922013053624.png)
 
 ---
 

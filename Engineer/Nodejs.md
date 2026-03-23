@@ -26,7 +26,7 @@ npx nodemon
 
 **代码目录：**
 
-![](src/2023-02-26-20-18-26-image.png)
+![](src/Nodejs/2023-02-26-20-18-26-image.png)
 
 **JavaScript代码：**
 
