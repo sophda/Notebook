@@ -227,7 +227,7 @@ make -j12
 
    主要是针对在**链接**的环节，经不断的尝试，发现`portable_kernels`和`optimized_kernels`会发生冲突，而冲突的表现就是**无法注册内核**，如下图所示：
 
-   ![image-20240907233526151](src/EdgeComputing/image-20240907233526151.png)
+   ![image-20240907233526151](src/EdgeComputing_img/image-20240907233526151.png)
 
    这个时候只需要把cmakelist中的链接选项修改一下就可以了：**xnnpack_backend是有必要加上的，这是一个cpu运算符库，即后端**
 
@@ -245,7 +245,7 @@ make -j12
 
    > 当时看executorch，有一点提到了kernel里的注册函数并不会主动执行，需要用一些链接选项（也就是上面cmake中的第1行），否则会被编译器优化掉。但是，**如果不加这几个选项的话，也是没有问题的！！**  可以参考官方给的几个cmakelist文件示例，都没有这几个选项的身影。。
    >
-   > ![image-20240907233749792](src/EdgeComputing/image-20240907233749792.png)
+   > ![image-20240907233749792](src/EdgeComputing_img/image-20240907233749792.png)
 
 2. EValue的符号问题
 
@@ -519,7 +519,7 @@ Java_com_example_chat_lib_gpt2_init(JNIEnv * env, jobject obj)
 
 - com_example_chat_lib：表示路径
 
-  ![image-20241210153106963](src/EdgeComputing/image-20241210153106963.png)
+  ![image-20241210153106963](src/EdgeComputing_img/image-20241210153106963.png)
 
 - gpt2：类名
 
@@ -700,11 +700,11 @@ int new_token_id = max.item().toInt();
 
 > 前提：使用`using namespace torch::indexing`
 
-![image-20241210151853067](src/EdgeComputing/image-20241210151853067.png)
+![image-20241210151853067](src/EdgeComputing_img/image-20241210151853067.png)
 
 如果是对tensor进行**赋值操作**，如下：
 
-![image-20241210152003532](src/EdgeComputing/image-20241210152003532.png)
+![image-20241210152003532](src/EdgeComputing_img/image-20241210152003532.png)
 
 2.输出的结果需要取argmax得到维度上的最大值，也就是最大的那个token id，需要将argmax得到的tensor转换为int类型
 

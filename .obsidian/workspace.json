@@ -4,21 +4,21 @@
     "type": "split",
     "children": [
       {
-        "id": "2e6fd56c99875ad4",
+        "id": "ca8d70fc6cc42a83",
         "type": "tabs",
         "children": [
           {
-            "id": "d64f0f3df5fa68e2",
+            "id": "97fc0296c91a5ba9",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Life/金融.md",
+                "file": "Engineer/UE5.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "金融"
+              "title": "UE5"
             }
           }
         ]
@@ -156,13 +156,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Life/金融.md",
+                "file": "Engineer/UE5.md",
                 "followCursor": true,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "金融 的大纲"
+              "title": "UE5 的大纲"
             }
           }
         ],
@@ -170,7 +170,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 356.5
+    "width": 249.5
   },
   "left-ribbon": {
     "hiddenItems": {
@@ -183,53 +183,54 @@
       "bases:新建数据库": false
     }
   },
-  "active": "d64f0f3df5fa68e2",
+  "active": "97fc0296c91a5ba9",
   "lastOpenFiles": [
-    "Life/src/金融/file-20260323104715124.png",
     "Life/金融.md",
+    "Life/社会经济.md",
+    "Engineer/wsl使用.md",
+    "Engineer/src/wsl使用_img",
+    "Engineer/src/Unity_img",
+    "Engineer/src/STM32_img",
+    "Engineer/src/SLAM_img",
+    "Engineer/src/OpenGL_img",
+    "Engineer/src/OpenCV_img",
+    "Engineer/src/opencv 交叉编译_img",
+    "Engineer/src/Nodejs_img",
+    "Engineer/src/Linux内核_img",
+    "Engineer/src/Linux_img",
+    "Engineer/EdgeComputing.md",
+    "Engineer/_project_AR.md",
+    "Engineer/深度学习.md",
+    "src/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3UwMTE0MjYwMTY=,size_16,color_FFFFFF,t_70.md",
+    "未命名.canvas",
+    "Engineer/Blender.md",
+    "Engineer/OpenCV.md",
+    "Engineer/C++.md",
+    "Life/医学.md",
+    "Life/src/image-20260321184751345.png",
+    "Life/src/image-20260127001803425.png",
+    "Life/随记.md",
+    "Life/src/金融_img/image-20260127000929721.png",
+    "Engineer/强化学习.md",
+    "Engineer/科普.md",
+    "Engineer/计算机网络.md",
+    "Life/src/金融/file-20260323104715124.png",
     "Engineer/opencv 交叉编译.md",
     "Engineer/CUDA.md",
     "Engineer/cmake.md",
     "Engineer/c++ Matrix.md",
     "Engineer/Unity.md",
     "Engineer/数据结构刷题.md",
-    "Engineer/_project_AR.md",
     "Engineer/src/vmss-1d8a1662941b3feed0bed96d3a01a4bd.png",
     "Engineer/src/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3UwMTE0MjYwMTY=,size_16,color_FFFFFF,t_70#pic_center.png",
-    "Engineer/src/安卓开发/image-20250901140136815.png",
-    "Engineer/src/安卓开发/f38d1afa14e70050d8cdbe247ef3e677.png",
-    "Engineer/src/安卓开发/ec351b79ee491b29a115e83374560973.png",
-    "Engineer/src/安卓开发/ebe5de44beb24d87fcd7032e6495a681.png",
-    "Engineer/src/安卓开发/da9a41693c01df7b2c4e1ae08bbd44f3.png",
-    "Engineer/src/安卓开发/c7117c7e3cce1d7d805932c8cdc4d993.png",
-    "Engineer/src/安卓开发/a496655ecb5b278be61c0b58afa53cbb-1756707627966-23.png",
-    "Engineer/src/安卓开发/a496655ecb5b278be61c0b58afa53cbb.png",
+    "Engineer/src/安卓开发_img/image-20250901140136815.png",
+    "Engineer/src/安卓开发_img/f38d1afa14e70050d8cdbe247ef3e677.png",
+    "Engineer/src/安卓开发_img/ec351b79ee491b29a115e83374560973.png",
+    "Engineer/src/安卓开发_img/ebe5de44beb24d87fcd7032e6495a681.png",
     "Engineer/操作系统.md",
-    "Engineer/src/wsl使用",
-    "Engineer/src/Unity",
-    "Engineer/src/STM32",
-    "Engineer/src/SLAM",
-    "Engineer/src/OpenGL",
-    "Engineer/src/OpenCV",
-    "Engineer/src/opencv 交叉编译",
-    "Engineer/src/Nodejs",
-    "Engineer/src/Linux内核",
-    "Engineer/src/Linux",
     "Engineer/安卓开发.md",
     "Engineer/_project_rpc.md",
     "Engineer/_project_llm.md",
-    "Engineer/C++.md",
-    "Life/随记.md",
-    "Life/社会经济.md",
-    "Life/医学.md",
-    "Engineer/FPGA.md",
-    "Engineer/Nodejs.md",
-    "2026-03-23.md",
-    "未命名.canvas",
-    "Engineer/UE5.md",
-    "Engineer/Untitled.md",
-    "Engineer/Untitled.canvas",
-    "Engineer/Blender.md",
-    "Engineer/系统移植概念.md"
+    "Engineer/Untitled.canvas"
   ]
 }

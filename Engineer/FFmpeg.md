@@ -20,7 +20,7 @@
   
    创建mainwindow类，此时会有三个文件
    
-   ![](src/FFmpeg/2023-02-23-22-50-47-image.png)
+   ![](src/FFmpeg_img/2023-02-23-22-50-47-image.png)
 
 > 可以用qt designer编辑ui文件，在terminal中，输入`designer`，然后打开文件
 > 
@@ -184,11 +184,11 @@ void mainwindow::btn_openpcd() {
 
 > 在vtk控件中嵌套一个pcl中的viewer，然后就可以显示点云了
 
-![](src/FFmpeg/2023-02-23-23-12-11-image.png)
+![](src/FFmpeg_img/2023-02-23-23-12-11-image.png)
 
 6. 然后就可以运行了哦~
 
-![](src/FFmpeg/2023-02-23-23-17-58-image.png)
+![](src/FFmpeg_img/2023-02-23-23-17-58-image.png)
 
 ## 显示图片
 

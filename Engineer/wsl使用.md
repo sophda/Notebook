@@ -33,7 +33,7 @@ source ~/.bashrc
 
 打开x服务器，然后启动
 
-![](src/wsl使用/bcb024a4560e6f405fdb2d4a80a24e9b22dc0248.png)
+![](src/wsl使用_img/bcb024a4560e6f405fdb2d4a80a24e9b22dc0248.png)
 
 然后会进入黑色桌面，然后进入wsl中，运行：
 
@@ -45,9 +45,9 @@ xfce4-session
 
 1.配置
 
-![](src/wsl使用/543139fc4b0db79ede84cf818d18fd29e28d179c.png)
+![](src/wsl使用_img/543139fc4b0db79ede84cf818d18fd29e28d179c.png)
 
-![](src/wsl使用/c3ab05d099c5e5c995198f4132c1a0238bc36ced.png)
+![](src/wsl使用_img/c3ab05d099c5e5c995198f4132c1a0238bc36ced.png)
 
 2.运行
 

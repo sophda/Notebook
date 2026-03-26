@@ -58,7 +58,7 @@ export NDK=/home/sophda/src/android-ndk-r25c/
 echo ${NDK}
 ```
 
-![image-20230714044728254](src/Linux/image-20230714044728254.png)
+![image-20230714044728254](src/Linux_img/image-20230714044728254.png)
 
 
 
@@ -76,7 +76,7 @@ echo ${NDK}
    readelf -h libopencv_photo.so
    ```
 
-   ![image-20230716045800044](src/Linux/image-20230716045800044.png)
+   ![image-20230716045800044](src/Linux_img/image-20230716045800044.png)
 
    **查看库的依赖：**
 

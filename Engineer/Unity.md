@@ -14,11 +14,11 @@
 
 > 如果还不行，可以使用下面的：把两项勾上
 >
-> ![image-20230713194349397](src/Unity/image-20230713194349397.png)
+> ![image-20230713194349397](src/Unity_img/image-20230713194349397.png)
 >
 > 成功的标志是：有csproj这个文件
 >
-> ![image-20230713210038410](src/Unity/image-20230713210038410.png)
+> ![image-20230713210038410](src/Unity_img/image-20230713210038410.png)
 
 # Unity基础操作
 
@@ -26,15 +26,15 @@
 
 ## 窗口布局
 
-![](src/Unity/2023-02-07-05-33-05-image.png)
+![](src/Unity_img/2023-02-07-05-33-05-image.png)
 
 - Hierarchy 层级，双击层级里的对象可以放到视野中心
   
-  ![](src/Unity/2023-02-07-05-42-17-image.png)
+  ![](src/Unity_img/2023-02-07-05-42-17-image.png)
 
 - 场景 可以理解为一个关卡
   
-  ![](src/Unity/2023-02-07-05-42-40-image.png)
+  ![](src/Unity_img/2023-02-07-05-42-40-image.png)
 
 ## 3D视图操作
 
@@ -46,13 +46,13 @@
   > 
   > 2.点击x、y、z以不同视角来看
   
-  ![](src/Unity/2023-02-07-05-45-02-image.png)
+  ![](src/Unity_img/2023-02-07-05-45-02-image.png)
 
-- 栅格 grid 表示xz坐标平面![](src/Unity/2023-02-07-05-47-03-image.png)
+- 栅格 grid 表示xz坐标平面![](src/Unity_img/2023-02-07-05-47-03-image.png)
 
 - 天空盒 skybox
   
-  ![](src/Unity/2023-02-07-05-48-49-image.png)
+  ![](src/Unity_img/2023-02-07-05-48-49-image.png)
 
 ## 坐标系
 
@@ -64,7 +64,7 @@
 
 调整摄像机到当前视角：align with view
 
-![](src/Unity/2023-02-07-06-49-36-image.png)
+![](src/Unity_img/2023-02-07-06-49-36-image.png)
 
 ## 播放模式
 
@@ -142,7 +142,7 @@ Transform trans = this.gameObject.transform;
 Debug.Log("localpos: "+trans.localPosition+" position: "+trans.position);
 ```
 
-![](src/Unity/2023-02-07-11-10-42-image.png)
+![](src/Unity_img/2023-02-07-11-10-42-image.png)
 
 **2.物体坐标设置**
 
@@ -353,7 +353,7 @@ unity，你也不希望小地图里显示的乱七八糟的把~
 
 可以使用层级，为**需要在小地图中显示的物体**设置一个独一无二的`layer`,然后使得主相机看不到这个，小地图相机可以看到。设置Camera中的**Culling Mask**选项
 
-![image-20230811003846408](src/Unity/image-20230811003846408.png)
+![image-20230811003846408](src/Unity_img/image-20230811003846408.png)
 
 # 坐标
 
@@ -416,7 +416,7 @@ $$
 
 **还有一件事！**如果在unity中同步了相机的位姿和位移，但是相机移动起来感觉模型不是特别同步？这是因为相机的视野太广了，导致绕z轴旋转可以跟踪的很好，但是绕x、y旋转或平移就很出戏（相机视角太广，即使相机是的的确确移动了的，但是模型还是处在相机的视野中，看起来跟没动一样，导致体验不好）。所以**调小camera->field of view**
 
-![image-20230816014702980](src/Unity/image-20230816014702980.png)
+![image-20230816014702980](src/Unity_img/image-20230816014702980.png)
 
 # CardBoard VR
 
@@ -437,7 +437,7 @@ $$
 3. 点击 **+**，然后选择 **Add package from git 网址**。
 
 4. 将 `https://github.com/googlevr/cardboard-xr-plugin.git` 粘贴到文本输入字段中。  
-   应将软件包添加到已安装的软件包。![](src/Unity/2023-02-10-20-55-34-image.png)
+   应将软件包添加到已安装的软件包。![](src/Unity_img/2023-02-10-20-55-34-image.png)
 
 5. 转到**适用于 Unity 的 Google Cardboard XR 插件**软件包。在**示例**部分中，选择**导入到项目中**。  
    示例资源应加载到 `Assets/Samples/Google Cardboard/<version>/Hello Cardboard`。
@@ -526,7 +526,7 @@ $$
 
 1. 将player中的camera移出来，然后删除player，然后将`camera->tracked pos driver->tracking type`中改为`rotation only`即可
 
-![](src/Unity/2023-02-21-02-45-10-image.png)
+![](src/Unity_img/2023-02-21-02-45-10-image.png)
 
 2. 然后要监听键盘wasd，只需要在camera脚本上添加监听即可。完整cs：
 
@@ -656,7 +656,7 @@ public class CameraPointer : MonoBehaviour
 
 然后将camera控制脚本放到player下面即可。相当于player只是起到了碰撞检测+重力的效果。
 
-![](src/Unity/2023-02-22-03-43-47-image.png)
+![](src/Unity_img/2023-02-22-03-43-47-image.png)
 
 ## canvas使用
 
@@ -777,25 +777,25 @@ public class TreeCtrl : MonoBehaviour
 
 3. 在cats插件中，fix model，这一步是对模型进行重新骨骼命名，删除一些顶点组等。在旁边的设置选项中**取消勾选keep upper chest**，这样是为了防止导入到unity中后头部骨骼弯曲
 
-   ![image-20230818024217147](src/Unity/image-20230818024217147.png)
+   ![image-20230818024217147](src/Unity_img/image-20230818024217147.png)
 
 4. 在cats插件中选择export model为fbx文件
 
 5. 将导出的**fbx文件+tex文件夹**拖拽进入unity，这样子导入的模型有几个问题：模型太亮了；头发是黑的；披风单面可见（面片材质）
 
-   ![image-20230818024638209](src/Unity/image-20230818024638209.png)
+   ![image-20230818024638209](src/Unity_img/image-20230818024638209.png)
 
 为了解决上述问题，需要具体**修改模型的材质**，但是fbx关联了tex文件夹，将材质固连到fbx内部了，所以需要将模型的材质**设置为外部进而方便修改**，如下所示：（在apply之后，就会出现一个materials的文件夹，里面就可以对模型材质进行具体修改了）
 
-![image-20230818025014818](src/Unity/image-20230818025014818.png)
+![image-20230818025014818](src/Unity_img/image-20230818025014818.png)
 
 - 模型高光、反射问题：修改shader。将materials里的所有材质的shader修改为**unlit-texture**
 
-  ![image-20230818025320108](src/Unity/image-20230818025320108.png)
+  ![image-20230818025320108](src/Unity_img/image-20230818025320108.png)
 
 - 小披风问题：由于披风模型是个面片，所以需要修改为双面显示。通过观察，披风的材质是由头发的那个决定的，将shader修改为：
 
-  ![image-20230818025857653](src/Unity/image-20230818025857653.png)
+  ![image-20230818025857653](src/Unity_img/image-20230818025857653.png)
 
   好消息：披风看见了。坏消息：这个时候头发又变黑了！这时候需要**修改：rendering mode为cutout**，至于原理，咱也不知道这个模型的头发是怎么处理的。unity官方的rendering mode是：
 
@@ -805,7 +805,7 @@ public class TreeCtrl : MonoBehaviour
 
   推测模型的头发可能有一层透明的，但是选择了不透明后就把头发的原材质给遮住了，选择了cutout后就把这一层给不可见了。
 
-  ![image-20230818030435611](src/Unity/image-20230818030435611.png)
+  ![image-20230818030435611](src/Unity_img/image-20230818030435611.png)
 
 # Android开发
 
@@ -852,7 +852,7 @@ public class TreeCtrl : MonoBehaviour
 
    - cmake-gui：只需要指定**编译工具链的cmake文件即可**，如下面的`android.toolchain.cmake`
 
-     ![image-20230714043731236](src/Unity/image-20230714043731236.png)
+     ![image-20230714043731236](src/Unity_img/image-20230714043731236.png)
 
    - 使用命令行，如下，首先进入build文件夹，
 
@@ -914,11 +914,11 @@ public class TreeCtrl : MonoBehaviour
 
 6. 打包，这里没什么说的，就是so库运行不能再电脑上看到效果，必须要打包到手机上。不过可以用debug来看到打印输出：下面不要选这个折叠。
 
-   ![image-20230714050342112](src/Unity/image-20230714050342112.png)
+   ![image-20230714050342112](src/Unity_img/image-20230714050342112.png)
 
    在跳舞的派蒙，可爱，超了~
 
-   ![image-20230714050633809](src/Unity/image-20230714050633809.png)
+   ![image-20230714050633809](src/Unity_img/image-20230714050633809.png)
 
 ## adb安装
 
@@ -1011,7 +1011,7 @@ adb install -t <test_only_apk_filename>.apk
            }
    ```
 
-   ![image-20230728044022180](src/Unity/image-20230728044022180.png)
+   ![image-20230728044022180](src/Unity_img/image-20230728044022180.png)
 
 
 
@@ -1053,7 +1053,7 @@ link=static
 
 会产生一系列的a静态库，我们需要这几个，主要是序列化相关的：
 
-![image-20231108005327565](src/Unity/image-20231108005327565.png)
+![image-20231108005327565](src/Unity_img/image-20231108005327565.png)
 
 同时，需要同步修改cmakelist文件，将生成的库orbslam库链接到这些静态库上，这里在实验中，只需要把cmakelist中的：
 
@@ -1066,7 +1066,7 @@ target_link_libraries()
 
 > 其实在网上找到的链接静态库的例子中，是这样子的：(也就是说，即使是静态库，也是用target_link_libraries来链接的)
 >
-> ![image-20231108005834602](src/Unity/image-20231108005834602.png)
+> ![image-20231108005834602](src/Unity_img/image-20231108005834602.png)
 
 最后，在完成链接后，**保留slam源码的src/system.cc中的boost serialization部分，构建也不会出现符号找不到的情况，证明是成功链接上的**。复制到unity中，也可以找到静态库。
 
@@ -1100,7 +1100,7 @@ T1+T2也不是SE(3)
 
 但是乘法是封闭的：
 
-![image-20230930135735899](src/Unity/image-20230930135735899.png)
+![image-20230930135735899](src/Unity_img/image-20230930135735899.png)
 
 **群**
 
@@ -1108,11 +1108,11 @@ T1+T2也不是SE(3)
 
 那么群可以记作G=（A，·）  群要求运算满足：
 
-![image-20230930135913683](src/Unity/image-20230930135913683.png)
+![image-20230930135913683](src/Unity_img/image-20230930135913683.png)
 
-![image-20230930235300666](src/Unity/image-20230930235300666.png)
+![image-20230930235300666](src/Unity_img/image-20230930235300666.png)
 
-![image-20230930235510612](src/Unity/image-20230930235510612.png)
+![image-20230930235510612](src/Unity_img/image-20230930235510612.png)
 
 ## Sophus库
 
@@ -1257,9 +1257,9 @@ int main() {
 
 
 
-![image-20231007234222525](src/Unity/image-20231007234222525.png)
+![image-20231007234222525](src/Unity_img/image-20231007234222525.png)
 
-![image-20231007235358193](src/Unity/image-20231007235358193.png)
+![image-20231007235358193](src/Unity_img/image-20231007235358193.png)
 
 这个可以观察到，桌子的大体轮廓，那么这些点是从orbslam3的getposition得到的，可以推测slam系统的坐标轴，光轴方向是相机方向，手机朝下的方向是y轴的正方向，手机朝右的方向是x轴正方向。
 
@@ -1920,7 +1920,7 @@ public class androidCam : MonoBehaviour
 
 fov与手机相机的内参有关，如果标定过了，可以直接使用。fov对应的是两个轴上的，在unity中，也有两个方向的值可以对应，但是两个值之间是对应的。在完成计算后，这些是用弧度表示的，所以要转换成角度值，然后放到unity中的fov处
 
-![image-20231214175338688](src/Unity/image-20231214175338688.png)
+![image-20231214175338688](src/Unity_img/image-20231214175338688.png)
 
 
 

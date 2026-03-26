@@ -1,8 +1,10 @@
 {
   "promptDelete": false,
   "readableLineLength": false,
-  "strictLineBreaks": true,
+  "strictLineBreaks": false,
   "newLinkFormat": "relative",
   "newFileLocation": "current",
-  "showUnsupportedFiles": false
+  "showUnsupportedFiles": false,
+  "showLineNumber": true,
+  "spellcheck": false
 }

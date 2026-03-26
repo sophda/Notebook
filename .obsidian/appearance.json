@@ -2,5 +2,10 @@
   "nativeMenus": false,
   "textFontFamily": "微软雅黑",
   "baseFontSize": 19,
-  "cssTheme": "Minimal"
+  "cssTheme": "Obsidian Nord",
+  "theme": "moonstone",
+  "enabledCssSnippets": [
+    "图片对齐",
+    "duan"
+  ]
 }
