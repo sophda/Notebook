@@ -170,7 +170,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 249.5
+    "width": 200
   },
   "left-ribbon": {
     "hiddenItems": {
@@ -183,8 +183,14 @@
       "bases:新建数据库": false
     }
   },
-  "active": "97fc0296c91a5ba9",
+  "active": "290902192c516ddc",
   "lastOpenFiles": [
+    "Engineer/STM32.md",
+    "Engineer/SLAM.md",
+    "Engineer/UE5.md",
+    "Engineer/Unity.md",
+    "Engineer/src/UE5_img/file-20260326191517900.png",
+    "Engineer/src/UE5_img",
     "Life/金融.md",
     "Life/社会经济.md",
     "Engineer/wsl使用.md",
@@ -197,7 +203,6 @@
     "Engineer/src/opencv 交叉编译_img",
     "Engineer/src/Nodejs_img",
     "Engineer/src/Linux内核_img",
-    "Engineer/src/Linux_img",
     "Engineer/EdgeComputing.md",
     "Engineer/_project_AR.md",
     "Engineer/深度学习.md",
@@ -219,18 +224,14 @@
     "Engineer/CUDA.md",
     "Engineer/cmake.md",
     "Engineer/c++ Matrix.md",
-    "Engineer/Unity.md",
     "Engineer/数据结构刷题.md",
     "Engineer/src/vmss-1d8a1662941b3feed0bed96d3a01a4bd.png",
     "Engineer/src/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3UwMTE0MjYwMTY=,size_16,color_FFFFFF,t_70#pic_center.png",
     "Engineer/src/安卓开发_img/image-20250901140136815.png",
     "Engineer/src/安卓开发_img/f38d1afa14e70050d8cdbe247ef3e677.png",
     "Engineer/src/安卓开发_img/ec351b79ee491b29a115e83374560973.png",
-    "Engineer/src/安卓开发_img/ebe5de44beb24d87fcd7032e6495a681.png",
     "Engineer/操作系统.md",
     "Engineer/安卓开发.md",
-    "Engineer/_project_rpc.md",
-    "Engineer/_project_llm.md",
     "Engineer/Untitled.canvas"
   ]
 }
