@@ -96,3 +96,45 @@ app.listen(8080,()=>{
 </body>
 </html>
 ```
+
+
+
+
+
+# 部署cloudflare pages
+
+> 前情提要：GitHub pages部署需要网页完全开源（对于白嫖党来说），这样网页每次的commit都会公开
+
+使用cloudflare pages部署的好处是，直接看到网页的最终界面，每次修改的commit就会隐藏起来。具体流程是：本地静态网页->push到闭源仓库github.io->触发cloudflare拉取并重新部署->看到页面
+
+
+
+## 搭建cloudflare pages
+
+创建应用，选择 **想要部署pages**，然后选择导入现有仓库即可，肥肠的便捷！
+
+![image-20260331212230758](src/image-20260331212230758.png)
+
+完成部署后，会得到一个后缀为pages.dev的网页，但是太难记了，因此需要一个简单点的域名~
+
+## 域名
+
+使用的是阿里云35 元/year的top域名，比如我的网页为www.sophda.top
+
+如果是使用阿里云进行域名解析的话，只能建立从 `www.sophda.top->pages.dev`的映射，如果我在网页里输入 `sophda.top`的时候，是无法跳转到网站的。
+
+因此需要将阿里云的dns域名解析服务器修改为cloudflare的，无他，cloudflare牛逼！支持cname到cname的解析。
+
+在cloudflare后台添加两条映射规则：
+
+![image-20260331212826732](src/image-20260331212826732.png)
+
+
+
+## 自动更新仓库
+
+> 我是在GitHub的notebook仓库更新的，如果使用api去获取仓库的内容，容易被GitHub ban掉。所以要在pages目录clone一个仓库，并自动cloud flare自动pull仓库
+
+1. 通过Python部署脚本，实现pages更新时，自动clone/pull仓库
+2. 通过webhook，当notebook仓库有push更新是，通过hook触发cloudflare pages的构建
+
