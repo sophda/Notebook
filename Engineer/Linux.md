@@ -898,3 +898,215 @@ linux程序在移植的时候，动态库是可以不看路径的。比如说，
    ```
 
    
+
+# 系统编程
+
+## 进程
+
+进程是操作系统分配的基本单位。每个进程都有自己独立的：
+
+- 虚拟空间地址
+- 代码段
+- 数据段
+- 堆区
+- 栈区
+- 文件描述符表
+- 运行状态
+- 环境变量
+
+---
+
+进程相关的命令：
+
+```
+ps aux
+top
+ps -ef | grep 程序名
+```
+
+```
+R    Running，正在运行，或者在运行队列中等待 CPU
+S    Sleeping，可中断睡眠，正在等待某个事件
+D    Uninterruptible sleep，不可中断睡眠，通常在等待磁盘或 IO
+T    Stopped，进程被暂停
+Z    Zombie，僵尸进程，子进程结束但父进程还没回收
+I    Idle，空闲的内核线程
+```
+
+---
+
+使用`fork`来创建一个子进程：
+
+```
+#include <stdio.h>
+#include <unistd.h>
+
+int main()
+{
+    pid_t pid;
+
+    pid = fork();
+
+    if (pid < 0)
+    {
+        printf("fork failed\n");
+    }
+    else if (pid == 0)
+    {
+        printf("This is child process, pid = %d\n", getpid());
+    }
+    else
+    {
+        printf("This is parent process, pid = %d, child pid = %d\n", getpid(), pid);
+    }
+
+    return 0;
+}
+```
+
+
+
+## IPC
+
+`IPC` 是 `Inter-Process Communication` 的缩写，即进程间通信。
+
+在Linux中，常见的`IPC`方式包括：
+
+```
+管道 pipe
+命名管道 FIFO
+信号 signal
+消息队列 message queue
+共享内存 shared memory
+信号量 semaphore
+套接字 socket
+内存映射 mmap
+```
+
+### 管道 pipe
+
+通过管道来实现父进程和子进程之间的通信。
+
+```
+进程 A 写入数据 ---> pipe ---> 进程 B 读取数据
+管道有两个端：
+    读端 read end
+    写端 write end
+在c语言中：
+    int fd[2];
+
+    fd[0] 是读端
+    fd[1] 是写端
+```
+
+```
+#include <stdio.h>
+#include <unistd.h>
+#include <string.h>
+#include <stdlib.h>
+
+int main()
+{
+    int fd[2];
+    pid_t pid;
+    char buffer[128];
+
+    if (pipe(fd) == -1)
+    {
+        perror("pipe failed");
+        exit(1);
+    }
+
+    pid = fork();
+
+    if (pid < 0)
+    {
+        perror("fork failed");
+        exit(1);
+    }
+    else if (pid == 0)
+    {
+        close(fd[1]);
+
+        read(fd[0], buffer, sizeof(buffer));
+
+        printf("Child process received: %s\n", buffer);
+
+        close(fd[0]);
+    }
+    else
+    {
+        close(fd[0]);
+
+        char msg[] = "Hello from parent process";
+
+        write(fd[1], msg, strlen(msg) + 1);
+
+        close(fd[1]);
+    }
+
+    return 0;
+}
+
+```
+
+在fork之后，会创建一个子进程，然后执行同一个`if...else...`分支
+
+```
+程序开始
+   |
+   | pipe(fd)
+   |
+   | fork()
+   |
+   |---------------- 子进程
+   |                    |
+父进程                 pid == 0
+   |                    |
+pid > 0                进入 else if
+   |                    |
+进入 else              关闭写端 fd[1]
+   |                    |
+关闭读端 fd[0]          read(fd[0], ...)
+   |                    |
+write(fd[1], ...)      printf(...)
+   |
+close(fd[1])
+```
+
+
+
+## socket
+
+
+
+## 共享内存
+
+
+
+
+
+## 动态库
+
+
+
+
+
+## systemd
+
+
+
+
+
+## 日志
+
+
+
+## 权限
+
+
+
+
+
+## 文件系统
+
