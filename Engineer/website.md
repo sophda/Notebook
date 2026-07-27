@@ -26,7 +26,7 @@ npx nodemon
 
 **代码目录：**
 
-![](src/Nodejs_img/2023-02-26-20-18-26-image.png)
+![](src/website_img/2023-02-26-20-18-26-image.png)
 
 **JavaScript代码：**
 
@@ -113,7 +113,7 @@ app.listen(8080,()=>{
 
 创建应用，选择 **想要部署pages**，然后选择导入现有仓库即可，肥肠的便捷！
 
-![image-20260331212230758](src/image-20260331212230758.png)
+![image-20260331212230758](src/website_img/image-20260331212230758.png)
 
 完成部署后，会得到一个后缀为pages.dev的网页，但是太难记了，因此需要一个简单点的域名~
 
@@ -127,7 +127,7 @@ app.listen(8080,()=>{
 
 在cloudflare后台添加两条映射规则：
 
-![image-20260331212826732](src/image-20260331212826732.png)
+![image-20260331212826732](src/website_img/image-20260331212826732.png)
 
 
 

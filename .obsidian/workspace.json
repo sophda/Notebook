@@ -11,10 +11,14 @@
             "id": "4ba107cc9f836c3c",
             "type": "leaf",
             "state": {
-              "type": "empty",
-              "state": {},
+              "type": "markdown",
+              "state": {
+                "file": "Life/金融.md",
+                "mode": "source",
+                "source": false
+              },
               "icon": "lucide-file",
-              "title": "新标签页"
+              "title": "金融"
             }
           }
         ]
@@ -152,12 +156,13 @@
             "state": {
               "type": "outline",
               "state": {
+                "file": "Life/金融.md",
                 "followCursor": true,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "大纲"
+              "title": "金融 的大纲"
             }
           }
         ],
@@ -178,8 +183,12 @@
       "bases:新建数据库": false
     }
   },
-  "active": "4ba107cc9f836c3c",
+  "active": "290902192c516ddc",
   "lastOpenFiles": [
+    "Math/src/线性代数_img",
+    "Engineer/src/website_img",
+    "Life/cook.md",
+    "未命名.canvas",
     "未命名 2.base",
     "未命名 6.base",
     "未命名.base",
@@ -197,13 +206,10 @@
     "Life/金融.md",
     "Life/社会经济.md",
     "Engineer/wsl使用.md",
-    "Engineer/src/wsl使用_img",
-    "Engineer/src/Unity_img",
     "Engineer/EdgeComputing.md",
     "Engineer/_project_AR.md",
     "Engineer/深度学习.md",
     "src/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3UwMTE0MjYwMTY=,size_16,color_FFFFFF,t_70.md",
-    "未命名.canvas",
     "Engineer/Blender.md",
     "Engineer/OpenCV.md",
     "Engineer/C++.md",
@@ -226,7 +232,6 @@
     "Engineer/src/安卓开发_img/image-20250901140136815.png",
     "Engineer/src/安卓开发_img/f38d1afa14e70050d8cdbe247ef3e677.png",
     "Engineer/src/安卓开发_img/ec351b79ee491b29a115e83374560973.png",
-    "Engineer/操作系统.md",
     "Engineer/Untitled.canvas"
   ]
 }
