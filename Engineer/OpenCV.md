@@ -93,7 +93,7 @@ def fill_color(img):
     cv2.floodFill(copy_img,mask,(30,30),(0,255,255),(100,100,100),(50,50,50),cv2.FLOODFILL_FIXED_RANGE)Cv2.imshow('',copyimg)
 ```
 
-![](src/OpenCV_img/2023-02-14-03-15-12-image.png)
+![](assets/OpenCV_img/2023-02-14-03-15-12-image.png)
 
 ## 通道提取
 
@@ -140,7 +140,7 @@ opencv默认是bgr格式
 img_hsv=cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
 ```
 
-![](src/OpenCV_img/2023-02-14-03-20-16-image.png)
+![](assets/OpenCV_img/2023-02-14-03-20-16-image.png)
 
 ## SIFT
 
@@ -157,7 +157,7 @@ trainIdx：样本图像的特征点描述符下标,同时也是描述符对应�
 
 distance：代表这怡翠匹配的特征点描述符的欧式距离，数值越小也就说明俩个特征点越相近。
 
-![](src/OpenCV_img/2023-02-14-03-21-04-image.png)
+![](assets/OpenCV_img/2023-02-14-03-21-04-image.png)
 
 cv2.xfeatures2d.SIFT_create().detectAndCompute()的参数：
 
@@ -203,19 +203,19 @@ Listnew = np.array(list)
 
 **np.max和np.maximum**
 
-![](src/OpenCV_img/2023-02-14-03-23-22-image.png)
+![](assets/OpenCV_img/2023-02-14-03-23-22-image.png)
 
-![](src/OpenCV_img/2023-02-14-03-23-45-image.png)
+![](assets/OpenCV_img/2023-02-14-03-23-45-image.png)
 
 # 函数api
 
 ## cv2.minAreaRect()
 
-![](src/OpenCV_img/2023-02-14-03-24-44-image.png)
+![](assets/OpenCV_img/2023-02-14-03-24-44-image.png)
 
-![](src/OpenCV_img/2023-02-14-03-24-58-image.png)
+![](assets/OpenCV_img/2023-02-14-03-24-58-image.png)
 
-![](src/OpenCV_img/2023-02-14-03-25-09-image.png)
+![](assets/OpenCV_img/2023-02-14-03-25-09-image.png)
 
 ## cv::flip
 
@@ -226,7 +226,7 @@ using namespace cv;
 flip(src,dst,1);
 ```
 
-![image-20230804093318423](src/OpenCV_img/image-20230804093318423.png)
+![image-20230804093318423](assets/OpenCV_img/image-20230804093318423.png)
 
 ## cv::Mat::t()就是求转置
 

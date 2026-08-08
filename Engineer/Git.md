@@ -459,4 +459,4 @@ git reset --hard origin/Feature/new_border_effect // 不会影响main分支，�
 
 
 
-![image-20260126125754490](src/Git_img/image-20260126125754490.png)
+![image-20260126125754490](assets/Git_img/image-20260126125754490.png)

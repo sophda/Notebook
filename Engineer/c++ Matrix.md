@@ -4,13 +4,13 @@
 
 ### 矩阵满秩
 
-![image-20231130013655127](src/c++%20Matrix_img/image-20231130013655127.png)
+![image-20231130013655127](assets/c++%20Matrix_img/image-20231130013655127.png)
 
 ### 正交矩阵
 
 正交矩阵的行列式为**正负1**
 
-![image-20231130013822961](src/c++%20Matrix_img/image-20231130013822961.png)
+![image-20231130013822961](assets/c++%20Matrix_img/image-20231130013822961.png)
 
 
 
@@ -22,7 +22,7 @@
 $$
 A=U\sum V^T
 $$
-![image-20231130011116276](src/c++%20Matrix_img/image-20231130011116276.png)
+![image-20231130011116276](assets/c++%20Matrix_img/image-20231130011116276.png)
 
 # c++ Eigen
 
@@ -210,4 +210,4 @@ Eigen::AngleAxisd rotation_vector ( M_PI/3, Eigen::Vector3d ( 0,0,1 ) );     //�
 
 输出结果如下：
 
-![image-20250228004543075](src/c++%20Matrix_img/image-20250228004543075.png)
+![image-20250228004543075](assets/c++%20Matrix_img/image-20250228004543075.png)

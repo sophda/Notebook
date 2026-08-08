@@ -31,15 +31,15 @@
 
    - project manager中包含了添加**源文件**，比如添加管脚约束、verilog源文件等
 
-     ![image-20240322231849978](src/FPGA_img/image-20240322231849978.png)
+     ![image-20240322231849978](assets/FPGA_img/image-20240322231849978.png)
 
    - Synthesis表示综合，**将高级抽象层次的电路描述转换为较低层次的描述。**也就是将语言描述的电路逻辑转换为**与门、或门、非门、触发器**等基本逻辑单元的互联关系。如下图的四选一电路：
 
-     ![image-20240322232945515](src/FPGA_img/image-20240322232945515.png)
+     ![image-20240322232945515](assets/FPGA_img/image-20240322232945515.png)
 
    - implement表示**实现**，implementation是一个place和route的过程，也就是布局布线。综合后的门级网表只是表示了门与门之间的虚拟连接关系，并没有规定每个门的位置以及连接线的长度等。布局布线就是一个将门级网表中的门的位置以及连线信息确定下来的过程
 
-     ![image-20240322233240699](src/FPGA_img/image-20240322233240699.png)
+     ![image-20240322233240699](assets/FPGA_img/image-20240322233240699.png)
 
      FPGA中包含众多的**可配置逻辑块（CLB）、丰富的布线资源以及其他资源**
 
@@ -52,7 +52,7 @@
 
    点击`open hardware manager`，`open target`，`Auto Connect`
 
-   ![image-20240322234641361](src/FPGA_img/image-20240322234641361.png)
+   ![image-20240322234641361](assets/FPGA_img/image-20240322234641361.png)
 
 ### v代码
 
@@ -153,7 +153,7 @@ set_property IOSTANDARD LVCMOS33 [get_ports clk]
 
 FPGA中是以模块为基础的，每一个**可综合**的.v文件都是一个模块，由module-endmodule来声明，在这两个关键字内部，完成模块的功能。如下：与门。
 
-![image-20240323000109857](src/FPGA_img/image-20240323000109857.png)
+![image-20240323000109857](assets/FPGA_img/image-20240323000109857.png)
 
 
 
@@ -185,13 +185,13 @@ wire型变量在物理结构上只是一根线，使用assign对线进行赋值�
 
 reg型变量左边有一个输入端口D，右端有一个输出端口Q，并且reg型存储数据需要在clk时钟控制下完成。**clk也就是方波**，由晶振产生，是我们描述数字电路最基本的时间单元，周期固定，占空比为50%。
 
-![image-20240323001252682](src/FPGA_img/image-20240323001252682.png)
+![image-20240323001252682](assets/FPGA_img/image-20240323001252682.png)
 
 ## Simulation
 
 仿真的文件夹如下：
 
-![image-20240424020957515](src/FPGA_img/image-20240424020957515.png)
+![image-20240424020957515](assets/FPGA_img/image-20240424020957515.png)
 
 在源文件中添加verilog文件，作为模块。
 
@@ -276,4 +276,4 @@ endmodule
 
 **关键点在于：在测试文件中实例化这个模块，然后对应好接口。**
 
-![image-20240424021500008](src/FPGA_img/image-20240424021500008.png)
+![image-20240424021500008](assets/FPGA_img/image-20240424021500008.png)

@@ -62,37 +62,37 @@ roslaunch [pkg_name] [filename.launch]
 
 1. 工作空间
   
-   ![](src/SLAM_img/2023-02-14-03-40-18-image.png)
+   ![](assets/SLAM_img/2023-02-14-03-40-18-image.png)
 
 2. 创建工作空间
   
-   ![](src/SLAM_img/2023-02-14-03-40-42-image.png)
+   ![](assets/SLAM_img/2023-02-14-03-40-42-image.png)
 
 3. 使用`catkin_create_pkg`创建包，依赖于`std_msgs`,`rospy`，`roscpp`
   
-   ![](src/SLAM_img/2023-02-14-03-42-00-image.png)
+   ![](assets/SLAM_img/2023-02-14-03-42-00-image.png)
    
    执行上述命令后，会生成`beginer_turorials`文件夹，包含`cmakelists.txt`和`package.xml`
 
 4. 编译包
   
-   ![](src/SLAM_img/2023-02-14-03-43-17-image.png)
+   ![](assets/SLAM_img/2023-02-14-03-43-17-image.png)
 
 5. 添加安装文件
   
-   ![](src/SLAM_img/2023-02-14-03-43-54-image.png)
+   ![](assets/SLAM_img/2023-02-14-03-43-54-image.png)
 
 ## 包依赖
 
 - `fist-order dependencies`
 
-![](src/SLAM_img/2023-02-14-03-44-46-image.png)
+![](assets/SLAM_img/2023-02-14-03-44-46-image.png)
 
 `rospack`列出了`catkin_create_pkg`使用的依赖，这些以来在`package.xml`文件中展示
 
 - `indirect dependencies`间接依赖
 
-![](src/SLAM_img/2023-02-14-03-46-46-image.png)
+![](assets/SLAM_img/2023-02-14-03-46-46-image.png)
 
 rospack可以递归地查找所有嵌套的依赖
 
@@ -100,13 +100,13 @@ rospack可以递归地查找所有嵌套的依赖
 
 1. 定制`package.xml`
   
-   ![](src/SLAM_img/2023-02-14-03-47-58-image.png)
+   ![](assets/SLAM_img/2023-02-14-03-47-58-image.png)
    
-   ![](src/SLAM_img/2023-02-14-03-48-10-image.png)
+   ![](assets/SLAM_img/2023-02-14-03-48-10-image.png)
    
-   ![](src/SLAM_img/2023-02-14-03-48-24-image.png)
+   ![](assets/SLAM_img/2023-02-14-03-48-24-image.png)
    
-   ![](src/SLAM_img/2023-02-14-03-48-36-image.png)
+   ![](assets/SLAM_img/2023-02-14-03-48-36-image.png)
 
 ## catkin_ws
 
@@ -299,13 +299,13 @@ CmakeList.txt & package.xml
 
 这时rviz应当是黑屏状态，原因是 orbslam并未订阅usb-cam的节点，所以：
 
-![](src/SLAM_img/2023-02-14-04-13-06-image.png)
+![](assets/SLAM_img/2023-02-14-04-13-06-image.png)
 
 ### 问题
 
 1. 提示
 
-![](src/SLAM_img/2023-02-14-04-14-36-image.png)
+![](assets/SLAM_img/2023-02-14-04-14-36-image.png)
 
 ```cpp
 #include<unistd.h>
@@ -313,7 +313,7 @@ CmakeList.txt & package.xml
 
 2. 包问题
   
-   ![](src/SLAM_img/2023-02-14-04-15-21-image.png)
+   ![](assets/SLAM_img/2023-02-14-04-15-21-image.png)
    
    ```shell
    sudo gedit /.bashrc
@@ -333,11 +333,11 @@ rosdep update
 
 3. lboost问题
   
-   ![](src/SLAM_img/2023-02-14-04-17-39-image.png)
+   ![](assets/SLAM_img/2023-02-14-04-17-39-image.png)
 
 **结果：**
 
-![image-20230606230423975](src/SLAM_img/image-20230606230423975.png)
+![image-20230606230423975](assets/SLAM_img/image-20230606230423975.png)
 
 
 
@@ -372,7 +372,7 @@ rosdep update
 
 **完整的多地图和多会话系统**。可以在纯视觉或视觉惯性模式下进行，使用单目、双目、深度相机
 
-![image-20231002142018343](src/SLAM_img/image-20231002142018343.png)
+![image-20231002142018343](assets/SLAM_img/image-20231002142018343.png)
 
 - atlas是由一组**不连接的地图**组成的多地图表示；存在**活动地图**，跟踪线程定位传入关键帧，并且通过本地映射线程利用新的关键帧不断优化和增长，将新地图集中的地方称为非活动地图
 
@@ -435,7 +435,7 @@ Transactions on Robotics）这篇文章里的理论，对连续视觉帧i和i+1�
 
 # calibration
 
-![image-20240411010552905](src/SLAM_img/image-20240411010552905.png)
+![image-20240411010552905](assets/SLAM_img/image-20240411010552905.png)
 
 # 李群 
 
@@ -460,19 +460,19 @@ Transactions on Robotics）这篇文章里的理论，对连续视觉帧i和i+1�
 
 1. 假定了加速度以及角速度的测量值：
 
-![image-20241105011444804](src/SLAM_img/image-20241105011444804.png)
+![image-20241105011444804](assets/SLAM_img/image-20241105011444804.png)
 
 这里作者假定加速度以及陀螺仪测量的**addiive noise**为正态分布nba和nbw服从，也就是下一次的a与w与上次的差值服从一个正态分布。
 
 于是：a和w的偏差的导数有：
 
-![image-20241105011707056](src/SLAM_img/image-20241105011707056.png)
+![image-20241105011707056](assets/SLAM_img/image-20241105011707056.png)
 
 2. 预积分（local frame）
 
 预积分对两个连续时间的帧bk与bk+1，由于imu的测量帧率大于照片的速率，于是在两帧之间有很多imu测量值。在local frame中有bk：
 
-![image-20241105012026088](src/SLAM_img/image-20241105012026088.png)
+![image-20241105012026088](assets/SLAM_img/image-20241105012026088.png)
 
 
 

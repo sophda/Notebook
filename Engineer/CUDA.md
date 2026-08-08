@@ -10,7 +10,7 @@
 
 比如在进行矩阵乘法的时候，将一个Grid中的所有block展开，每一个block中的thread展开，那么每一个线程可以对应一个新的矩阵的对应元素。
 
-![img](src/CUDA_img/v2-aa6aa453ff39aa7078dde59b59b512d8_1440w.jpg)
+![img](assets/CUDA_img/v2-aa6aa453ff39aa7078dde59b59b512d8_1440w.jpg)
 
 
 
@@ -25,7 +25,7 @@ int m =  blockIdx.y * blockDim.y + threadIdx.y;
 int n = blockIdx.x * blockDim.x + threadIdx.x;
 ```
 
-![img](src/CUDA_img/v2-735b66bba1a64de5a87a0e4309d14c5d_1440w.jpg)
+![img](assets/CUDA_img/v2-735b66bba1a64de5a87a0e4309d14c5d_1440w.jpg)
 
 对应cuda kernel上：
 
@@ -53,7 +53,7 @@ __global__ void naiveSgemm(
 
 ## 高速缓存
 
-![image-20250309204217107](src/CUDA_img/image-20250309204217107.png)
+![image-20250309204217107](assets/CUDA_img/image-20250309204217107.png)
 
 
 
@@ -73,7 +73,7 @@ cpu执行多线程，需要多次穿插执行每个线程，所以上下文切�
 
 ## 共享内存
 
-![image-20250309210542437](src/CUDA_img/image-20250309210542437.png)
+![image-20250309210542437](assets/CUDA_img/image-20250309210542437.png)
 
 共享内存位于gpu的流式多处理器sm内部，访问速度远快于全局内存（global memory），通常延迟在几个时钟周期。
 
@@ -85,7 +85,7 @@ cpu执行多线程，需要多次穿插执行每个线程，所以上下文切�
 
 
 
-![image-20250310230852629](src/CUDA_img/image-20250310230852629.png)
+![image-20250310230852629](assets/CUDA_img/image-20250310230852629.png)
 
 存储体冲突：当多个线程同时访问同一个存储体时，会发生存储体冲突
 
@@ -109,15 +109,15 @@ cpu执行多线程，需要多次穿插执行每个线程，所以上下文切�
 
 **在执行的时候，一个kernel对应着一个grid**，grid内的线程在执行时，是通过warp来组织的，一个warp包含了32个线程并且运行在一个SM上，warp内共享指令，每四个周期执行一条warp指令且由sm动态调度。
 
-![img](src/CUDA_img/kernel_func-4689403a059059ccbd20a07cae37d1ed.png)
+![img](assets/CUDA_img/kernel_func-4689403a059059ccbd20a07cae37d1ed.png)
 
-![img](src/CUDA_img/exec_model_SM-fbe5ceb5d09beb2c1dffc4abd2d5194c.jpg)
+![img](assets/CUDA_img/exec_model_SM-fbe5ceb5d09beb2c1dffc4abd2d5194c.jpg)
 
 
 
 ## 线程的层次结构
 
-![img](src/CUDA_img/thread_grid-31a1c0b8068c1ee9dc8c0cb0cadcdc83.jpg)
+![img](assets/CUDA_img/thread_grid-31a1c0b8068c1ee9dc8c0cb0cadcdc83.jpg)
 
 ### grid
 
@@ -135,7 +135,7 @@ block包含了很多可以并行执行的线程，有一维、二维、三维。
 
 **一个块内的线程可以进行协作，协作通过使用一些共享内存(shared memory)来共享数据或通过同步彼此执行来协调内存访问实现。** 更准确地说，可以通过调用 **syncthreads() 内部函数来指定内核中的同步点；** syncthreads() 充当屏障，块中的所有线程必须等待同步，然后才能继续运行。 Shared Memory 给出了一个使用共享内存的例子。 除了 __syncthreads() 之外，Cooperative Groups API 还提供了一组丰富的线程同步示例。
 
-![img](src/CUDA_img/sm_detail-abf633eeff37ac3ff2af267cbda3c2fa.png)
+![img](assets/CUDA_img/sm_detail-abf633eeff37ac3ff2af267cbda3c2fa.png)
 
 为了高效协作，共享内存是每个「处理器核心」附近的低延迟内存（很像 L1 缓存），并且 __syncthreads() 是轻量级的。不同 Block 下的线程无法进行同步（因为这些线程可能分布在不同的 SM 中）。
 
@@ -155,13 +155,13 @@ block包含了很多可以并行执行的线程，有一维、二维、三维。
 
 ## 数据传输与内存管理
 
-![img](src/CUDA_img/memory_arch-81fe47f774b7aa36be52951b911840f2.jpg)
+![img](assets/CUDA_img/memory_arch-81fe47f774b7aa36be52951b911840f2.jpg)
 
 CPU 与 GPU 之间的通信开销是比较大的。
 
 ---
 
-![img](src/CUDA_img/dma_d2h-b202ed101a13c91ff687033a2ceade5d.png)
+![img](assets/CUDA_img/dma_d2h-b202ed101a13c91ff687033a2ceade5d.png)
 
 从上图我们可以看出:
 
@@ -183,23 +183,23 @@ CPU 与 GPU 之间的通信开销是比较大的。
 
 函数执行空间说明符 (Function Execution Space Specifiers ) 表示函数是在「主机上（即 Host 端）」执行还是在「设备上（即 Device 端）」执行，以及它可「被主机调用」还是可「被设备调用」。
 
-![img](src/CUDA_img/fess-f93e515382eba41079cefa5f245aeaab.png)
+![img](assets/CUDA_img/fess-f93e515382eba41079cefa5f245aeaab.png)
 
 
 
 ## 变量内存空间说明符
 
-![img](src/CUDA_img/vmss-1d8a1662941b3feed0bed96d3a01a4bd-17494375444563.png)
+![img](assets/CUDA_img/vmss-1d8a1662941b3feed0bed96d3a01a4bd-17494375444563.png)
 
-![img](src/CUDA_img/fsmss_overview-42c7582e172bba6438555070b29eaeaf.png)
+![img](assets/CUDA_img/fsmss_overview-42c7582e172bba6438555070b29eaeaf.png)
 
 
 
 ## CUDA内存管理
 
-![img](src/CUDA_img/cuda_mem-7519ca351e0a94a57c376d6258060d46.jpg)
+![img](assets/CUDA_img/cuda_mem-7519ca351e0a94a57c376d6258060d46.jpg)
 
-![img](src/CUDA_img/cuda_mem_func-83c90e105996f31890cc2eb8c4533b6f.png)
+![img](assets/CUDA_img/cuda_mem_func-83c90e105996f31890cc2eb8c4533b6f.png)
 
 我们用 cudaMalloc() 为 GPU 分配内存，用 malloc() 为 CPU 分配内存。除此之外，CUDA 还提供了自己独有的机制来分配 host 内存：cudaHostAlloc()。 这个函数和 malloc 的区别是什么呢?
 
@@ -217,7 +217,7 @@ CPU 与 GPU 之间的通信开销是比较大的。
 
 # CUDA硬件基础
 
-![img](src/CUDA_img/A100-f2889fca404e76f60c2a9bf2a12f0d08.png)
+![img](assets/CUDA_img/A100-f2889fca404e76f60c2a9bf2a12f0d08.png)
 
 A100 硬件的架构如上图。其中 A100 SM 包含新的第三代 Tensor 内核：
 
@@ -239,13 +239,13 @@ A100 硬件的架构如上图。其中 A100 SM 包含新的第三代 Tensor 内�
 - LD/ST 是load store unit，用来内存操作的。SFU是Special function unit，用来做cuda的intrinsic function的，类似于__cos()这种。
 
 
-![img](src/CUDA_img/A100_SM-41eb6b4cdad59639be480d5c7e671be5.jpg)
+![img](assets/CUDA_img/A100_SM-41eb6b4cdad59639be480d5c7e671be5.jpg)
 
 从上图可以看出 GA100 的 SM 架构相比 G80 复杂了很多，占地面积也更大。**每个 SM 包括 4 个区块，每个区块有独立的 L0 指令缓存、Warp 调度器、分发单元，以及 16384 个 32 位寄存器，这使得每个 SM 可以并行执行 4 组不同指令序列。4 个区块共享 L1 指令缓存和数据缓存、shared memory、纹理单元。**
 
 一个cuda core的结构：
 
-![cuda core](src/CUDA_img/27447c25f2c4e8fa974a26bbb5b51644.png)
+![cuda core](assets/CUDA_img/27447c25f2c4e8fa974a26bbb5b51644.png)
 
 ---
 
@@ -253,7 +253,7 @@ A100 硬件的架构如上图。其中 A100 SM 包含新的第三代 Tensor 内�
 
 从图中也能看出 INT32 计算单元数量与 FP32 一致，而 FP64 计算单元数量是 FP32 的一半，这在后面峰值计算能力中会有体现。
 
-![img](src/CUDA_img/A100_params-4818f664f05838d991b08b303bce05d0.png)
+![img](assets/CUDA_img/A100_params-4818f664f05838d991b08b303bce05d0.png)
 
 每个 SM 除了 INT32、FP32、FP64 计算单元之外，还有额外 4 个身宽体胖的 **Tensor Core，这是加速 Deep Learning 计算的重磅武器，已发展到第三代，每个时钟周期可做 1024 次 FP16 乘加运算**，与 Volta 和 Turing 相比，每个 SM 的吞吐翻倍，支持的数据类型也更为丰富，包括 FP64、TF32、FP16、BF16、INT8、INT4、INT1。
 
@@ -274,11 +274,11 @@ A100 硬件的架构如上图。其中 A100 SM 包含新的第三代 Tensor 内�
 - Register File 即寄存器组
 - Tex 即图形渲染时需要用到的内存
 
-![img](src/CUDA_img/SM_mem_detail-36b4cf3dce39c8c50d7f8b5ada9d7b5e.jpg)
+![img](assets/CUDA_img/SM_mem_detail-36b4cf3dce39c8c50d7f8b5ada9d7b5e.jpg)
 
 在并行的执行过程中，线程们被打包成一个个 Block 传入 Streaming Multiprocessors (SM)。一个 block 只能调度到一个 Streaming Multiprocessor 上运行。一个 Streaming Multiprocessor 可以同时运行多个 block。但是每个 SM 是有对同时运行的 Block 数量和线程数量的限制，比如较近的 CUDA 装置就限制一个 SM 上最多同时运行 8 个 Block 和 1536 个线程。当然，一个 CUDA 设备上可以有多个 SM，比如一个有 30 个 SM 的 CUDA 设备，如果每个 SM 最多同时运行 1536 个线程，则同时最多可以运行 46080 个线程
 
-![img](src/CUDA_img/cuda_core-19882636aa22b20a46207a7a7f7f9b84.png)
+![img](assets/CUDA_img/cuda_core-19882636aa22b20a46207a7a7f7f9b84.png)
 
 
 
@@ -296,11 +296,11 @@ warp是SM的基本执行单元，一个warp中的线程必然存在于同一个b
 
 如下例子中，同一个线程束的线程根据编号被分为了奇数线程和偶数线程，但是这样就带了一个问题，所有该线程束中的线程先计算 if 语句中的逻辑运算，于是奇数的线程被激活了并且进行 if 中的运算，而未被激活的偶数线程只能等待。假设这是一个 if else 语句，那么轮到 else 的时候则是未被激活的奇数线程等待，由于当前 GPU 总是串形的执行不同的路径，因此我们造成了 50%的计算资源浪费。
 
-![img](src/CUDA_img/warp_diverage-b67fa64a2658359bc44972b25e9a2e9b.png)
+![img](assets/CUDA_img/warp_diverage-b67fa64a2658359bc44972b25e9a2e9b.png)
 
 为了更加清晰的说明线程束发散，可以看看如下图例：
 
-![img](src/CUDA_img/warp_diverage2-19b2986805c9fb6c6eff1c2bf0970b27.png)
+![img](assets/CUDA_img/warp_diverage2-19b2986805c9fb6c6eff1c2bf0970b27.png)
 
 在上述图例中，if else 控制语句将线程束里的 8 个线程（假定一个线程束里 8 个线程）分成左 4 个和右 4 个，在左 4 运行 A,B,C 的时候，右 4 只能等待；同理在右 4 运行 X，Y 的时候左 4 也只能等待。在结束控制语句以后才能会和起来一起运行 Z。这样串形的执行不同路径让左 4 和右 4 都等待了一段时间，造成了计算资源的浪费。
 
@@ -356,7 +356,7 @@ bank是内存的访问时一种划分方式。
 
 **当有多个线程同时访问一个列中的不同数组时（都在一个bank中，无法并行读取），会发生bank conflict，这时候只能串行执行数据读取**
 
-![image-20250610012055775](src/CUDA_img/image-20250610012055775.png)
+![image-20250610012055775](assets/CUDA_img/image-20250610012055775.png)
 
 ---
 
@@ -366,7 +366,7 @@ bank是内存的访问时一种划分方式。
 
 下面这张图中：
 
-![image-20250610013014615](src/CUDA_img/image-20250610013014615.png)
+![image-20250610013014615](assets/CUDA_img/image-20250610013014615.png)
 
 - 左：线性寻址，步幅为一个 32 -bit（无 bank conflict）
 - 中：线性寻址，步幅为两个 32 -bit（双向 bank conflict）结合我画的那张图，步幅时2*4字节=8字节，这样数据在分配时，为bank  0、8/4=2、16/4=4、··· 120/4=30、（128/4）%32=0，于是可以看到，当线程在寻址时，会有线程寻址落在同一个bank内的情况，导致竞争->bank conflict
@@ -398,7 +398,7 @@ GPU 上一般包含很多流式处理器 SM，每个 SM 是 CUDA 架构中的基
 
 块中的线程数可以使用一个通常称为 `blockDim` 的变量进行配置，它是一个由三个整数组成的向量。该向量的条目指定了 `blockDim.x`、`blockDim.y` 和 `blockDim.z` 的大小，如下图所示：
 
-![picture 0](src/CUDA_img/0b35adb64a964e56018dc9fb7277269a3efa72b1526058609e0860f33e00426b-b3a7e4298b605de4f56edfff09169f1a.png)
+![picture 0](assets/CUDA_img/0b35adb64a964e56018dc9fb7277269a3efa72b1526058609e0860f33e00426b-b3a7e4298b605de4f56edfff09169f1a.png)
 
 同样，网格中的块数可以使用 `gridDim` 变量进行配置。当我们从主机启动一个新的内核时，它会创建一个包含按照指定方式排列的块和线程的单一网格。
 
@@ -440,7 +440,7 @@ __global__ void sgemm_naive_kernel(float *A, float *B, float *C, int M, int N, i
 
 下图可视化了我们的内核的执行方式：
 
-![picture 1](src/CUDA_img/6f55c7f9531e5efd955eab9a572ef5406733498bc0b50abed0e73985d88c840b-a41ab97d63a8f3d017bacaede20e8b5e.png)
+![picture 1](assets/CUDA_img/6f55c7f9531e5efd955eab9a572ef5406733498bc0b50abed0e73985d88c840b-a41ab97d63a8f3d017bacaede20e8b5e.png)
 
 一个好的编程习惯：在代码的最后一定一定记得释放堆内存，避免内存泄漏；并将指针置为空防止野指针的出现。不过这种事很容易忘记，有兴趣的宝贝可以学习下智能指针的用法，本文就不在展开介绍 C++ 的东西。
 

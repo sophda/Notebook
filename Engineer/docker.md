@@ -1,4 +1,4 @@
-![image-20250424152600215](src/docker_img/image-20250424152600215.png)
+![image-20250424152600215](assets/docker_img/image-20250424152600215.png)
 
 
 
@@ -20,7 +20,7 @@ docker是一种方便部署的，通过 镜像-容器 快速实现对应功能�
 
 # 常用命令
 
-![img](src/docker_img/deda3bd54e604739d2802a6a5b61060c.jpeg)
+![img](assets/docker_img/deda3bd54e604739d2802a6a5b61060c.jpeg)
 
 ## 下载镜像
 

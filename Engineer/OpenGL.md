@@ -4,7 +4,7 @@
 
 OpenGL是一套控制显卡的规范，没有具体的函数库。所以具体的函数实现主要是由gl、glu、glut这些库来实现
 
-![image-20230523205435163](src/OpenGL_img/image-20230523205435163.png)
+![image-20230523205435163](assets/OpenGL_img/image-20230523205435163.png)
 
 ## 安装与测试
 
@@ -86,7 +86,7 @@ OpenGL是一套控制显卡的规范，没有具体的函数库。所以具体�
 
    运行生成的main文件即可。
 
-   ![image-20230523212003494](src/OpenGL_img/image-20230523212003494.png)
+   ![image-20230523212003494](assets/OpenGL_img/image-20230523212003494.png)
 
 ## 在arm板子上使用opengl
 
@@ -133,7 +133,7 @@ OpenGL是一套控制显卡的规范，没有具体的函数库。所以具体�
 
 在OpenGL中，任何事物都在3D空间中，而屏幕和窗口却是2D像素数组，这导致OpenGL的大部分工作都是关于把3D坐标转变为适应你屏幕的2D像素。3D坐标转为2D坐标的处理过程是由OpenGL的图形渲染管线（Graphics Pipeline，大多译为管线，实际上指的是一堆原始图形数据途经一个输送管道，期间经过各种变化处理最终出现在屏幕的过程）管理的。图形渲染管线可以被划分为两个主要部分：第一部分把你的3D坐标转换为2D坐标，第二部分是把2D坐标转变为实际的有颜色的像素。
 
-![img](src/OpenGL_img/pipeline.png)
+![img](assets/OpenGL_img/pipeline.png)
 
 1. 开始绘制图形之前，我们需要先给OpenGL输入一些顶点数据。OpenGL是一个3D图形库，所以在OpenGL中我们指定的所有坐标都是3D坐标（x、y和z）。定义这样的顶点数据以后，我们会把它作为输入发送给图形渲染管线的第一个处理阶段：顶点着色器。它会在GPU上创建内存用于储存我们的顶点数据，还要配置OpenGL如何解释这些内存，并且指定其如何发送给显卡。顶点着色器接着会处理我们在内存中指定数量的顶点。
 
@@ -194,7 +194,7 @@ unsigned int vertex_shader = glCreateShader(GL_VERTEX_SHADER);
 
 顶点数据会被解析为：
 
-![img](src/OpenGL_img/vertex_attribute_pointer.png)
+![img](assets/OpenGL_img/vertex_attribute_pointer.png)
 
 - 位置数据被储存为32位（4字节）浮点值。
 - 每个位置包含3个这样的值。
@@ -224,7 +224,7 @@ glVertexAttribPointer函数的参数非常多，所以我会逐一介绍它们�
 - 通过glVertexAttribPointer设置的顶点属性配置。
 - 通过glVertexAttribPointer调用与顶点属性关联的顶点缓冲对象。
 
-![img](src/OpenGL_img/vertex_array_objects.png)
+![img](assets/OpenGL_img/vertex_array_objects.png)
 
 **用法**
 
@@ -310,7 +310,7 @@ glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
 如下图所示，VAO在绑定VBO时会自动绑定EBO对象。**VAO存储了EBO对象**
 
-![img](src/OpenGL_img/vertex_array_objects_ebo.png)
+![img](assets/OpenGL_img/vertex_array_objects_ebo.png)
 
 ```c++
 // ..:: 初始化代码 :: ..
@@ -697,7 +697,7 @@ glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
 
 纹理坐标在x和y轴上，范围为0到1之间（注意我们使用的是2D纹理图像）。使用纹理坐标获取纹理颜色叫做采样(Sampling)。纹理坐标起始于(0, 0)，也就是纹理图片的左下角，终止于(1, 1)，即纹理图片的右上角。下面的图片展示了我们是如何把纹理坐标映射到三角形上的。
 
-![img](src/OpenGL_img/tex_coords.png)
+![img](assets/OpenGL_img/tex_coords.png)
 
 我们为三角形指定了3个纹理坐标点。如上图所示，我们希望三角形的左下角对应纹理的左下角，因此我们把三角形左下角顶点的纹理坐标设置为(0, 0)；同理右下方的顶点设置为(1, 0)；三角形的上顶点对应于图片的上中位置所以我们把它的纹理坐标设置为(0.5, 1.0)。我们只要给顶点着色器传递这三个纹理坐标就行了，接下来它们会被传到片段着色器中，它会为每个片段进行纹理坐标的插值。
 
@@ -731,7 +731,7 @@ float texCoords[] = {
 - 裁剪空间(Clip Space)
 - 屏幕空间(Screen Space)
 
-   ![coordinate_systems](src/OpenGL_img/coordinate_systems.png)
+   ![coordinate_systems](assets/OpenGL_img/coordinate_systems.png)
 
 变换矩阵：模型矩阵、观察矩阵和投影矩阵。$V_{clip}=M_{projection}*M_{view}*M_{model}*V_{local}$ 
 
@@ -769,7 +769,7 @@ $V_{local}$是模型再局部坐标的位置。
 
 当使用Assimp导入一个模型的时候，它通常会将整个模型加载进一个**场景**(Scene)对象，它会包含导入的模型/场景中的所有数据。Assimp会将场景载入为一系列的节点(Node)，每个节点包含了场景对象中所储存数据的索引，每个节点都可以有任意数量的子节点。Assimp数据结构的（简化）模型如下：
 
-![img](src/OpenGL_img/assimp_structure.png)
+![img](assets/OpenGL_img/assimp_structure.png)
 
 ## 导入3D模型到OpenGL
 
@@ -939,7 +939,7 @@ $V_{local}$是模型再局部坐标的位置。
 2. 动画，在blender中进行k帧，然后用插件cats导出“烘焙动画”为fbx格式文件
 2. 加载动画，这部分可以用mixamo，前提是用插件导出的，用blender到处的不知道为啥，上传后解析不出来？~
 
-![image-20230705031105184](src/OpenGL_img/image-20230705031105184.png)
+![image-20230705031105184](assets/OpenGL_img/image-20230705031105184.png)
 
 ### 使用Assimp加载骨骼动画
 
@@ -947,13 +947,13 @@ assimp库我日你妈，他妈的我下的最新版本的5.xx的，结果你加�
 
 庶民的伟大胜利，总算是可以动起来了。
 
-![image-20230710130000850](src/OpenGL_img/image-20230710130000850.png)
+![image-20230710130000850](assets/OpenGL_img/image-20230710130000850.png)
 
 ### 加载blender转化的pmx文件格式
 
 效果：
 
-![image-20230710145129465](src/OpenGL_img/image-20230710145129465.png)
+![image-20230710145129465](assets/OpenGL_img/image-20230710145129465.png)
 
 1. 首先安装插件
 2. 首先用cat插件导入pmx格式文件，然后使用material工具合并成一个贴图的模型；然后使用mmd插件导入动画，注意要调整缩放，cats可能默认调整成0.1了
@@ -963,7 +963,7 @@ assimp库我日你妈，他妈的我下的最新版本的5.xx的，结果你加�
 
 ### 加载模型与动画
 
-![image-20230711234400741](src/OpenGL_img/image-20230711234400741.png)
+![image-20230711234400741](assets/OpenGL_img/image-20230711234400741.png)
 
 学习心得，以及踩得几个坑：
 
