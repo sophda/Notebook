@@ -1,0 +1,10 @@
+{
+  "promptDelete": false,
+  "strictLineBreaks": false,
+  "newLinkFormat": "relative",
+  "showLineNumber": false,
+  "showIndentGuide": true,
+  "tabSize": 2,
+  "readableLineLength": true,
+  "showInlineTitle": true
+}

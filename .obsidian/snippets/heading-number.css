@@ -1,0 +1,20 @@
+/* 仅给 Obsidian「大纲」面板添加层级编号 */
+
+/* 初始化第一层计数器，并在每组子标题中重新开始计数 */
+.workspace-leaf-content[data-type="outline"] .view-content,
+.workspace-leaf-content[data-type="outline"] .tree-item-children {
+    counter-reset: outline-item;
+}
+
+/* 每个大纲条目递增当前层级的计数器 */
+.workspace-leaf-content[data-type="outline"] .tree-item-self {
+    counter-increment: outline-item;
+}
+
+/* 在标题文字前显示完整层级编号 */
+.workspace-leaf-content[data-type="outline"]
+.tree-item-self > .tree-item-inner::before {
+    content: counters(outline-item, ".") ". ";
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}

@@ -1,0 +1,32 @@
+/* 仿照参考图：英文手写体 + 中文楷体。
+   截图无法确认字体原名；这里使用本机已安装的近似字体。
+   英文字体排在前面，中文字符自动回退到楷体。 */
+body {
+  --reference-text-font: "Comic Sans MS", "KaiTi", "楷体", "STKaiti", "华文楷体", cursive;
+  --font-text: var(--reference-text-font);
+  --font-text-theme: var(--reference-text-font);
+}
+
+/* 覆盖主题的标题字体，适用于阅读视图与实时预览。 */
+.markdown-preview-view,
+.markdown-source-view.mod-cm6 {
+  --h1-font: var(--reference-text-font);
+  --h2-font: var(--reference-text-font);
+  --h3-font: var(--reference-text-font);
+  --h4-font: var(--reference-text-font);
+  --h5-font: var(--reference-text-font);
+  --h6-font: var(--reference-text-font);
+}
+
+.markdown-preview-view,
+.markdown-source-view.mod-cm6 .cm-scroller,
+.markdown-source-view.mod-cm6 .cm-content,
+.markdown-view .inline-title {
+  font-family: var(--reference-text-font);
+}
+
+/* 行内代码、代码块保留等宽字体。 */
+.markdown-preview-view :is(code, pre),
+.markdown-source-view.mod-cm6 :is(.cm-inline-code, .HyperMD-codeblock) {
+  font-family: var(--font-monospace);
+}

@@ -1,0 +1,12 @@
+{
+  "baseFontSize": 17,
+  "baseFontSizeAction": true,
+  "enabledCssSnippets": [
+    "heading-number",
+    "paragraphlen",
+    "paragraph",
+    "typora_ref",
+    "typora",
+    "font"
+  ]
+}
